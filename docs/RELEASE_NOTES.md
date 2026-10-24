@@ -17,3 +17,7 @@ The SHA-256 file next to each download can be used to verify it.
 
 FrameFlow's original code and assets are MIT-licensed. Third-party components retain their own
 licenses; see `LICENSE` and `THIRD_PARTY_NOTICES.md` inside the installed folder or ZIP.
+
+## Interface
+
+![FrameFlow 1.0.0 main window](https://raw.githubusercontent.com/MhDTam/FrameFlow/main/docs/frameflow-main.png)
