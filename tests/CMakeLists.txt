@@ -1,0 +1,13 @@
+function(ff_test name)
+    cmake_parse_arguments(ARG "" "" "SOURCES;DEPS" ${ARGN})
+    add_executable(${name} ${ARG_SOURCES})
+    target_include_directories(${name} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+    target_link_libraries(${name} PRIVATE ${ARG_DEPS})
+    add_test(NAME ${name} COMMAND ${name})
+endfunction()
+
+ff_test(FrameFlow.TimingTests    SOURCES TimingTests/TimingTests.cpp       DEPS ff_timing ff_telemetry)
+ff_test(FrameFlow.TelemetryTests SOURCES TelemetryTests/TelemetryTests.cpp DEPS ff_telemetry)
+ff_test(FrameFlow.ProcessTests   SOURCES ProcessTests/ProcessTests.cpp     DEPS ff_process)
+ff_test(FrameFlow.ProfileTests   SOURCES ProfileTests/ProfileTests.cpp     DEPS ff_profiles ff_core)
+ff_test(FrameFlow.IpcTests       SOURCES IpcTests/IpcTests.cpp             DEPS ff_ipc ff_graphics ff_display)

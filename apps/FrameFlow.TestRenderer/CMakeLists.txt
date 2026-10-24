@@ -1,0 +1,7 @@
+add_executable(FrameFlow.TestRenderer WIN32 main.cpp renderer.rc)
+target_link_libraries(FrameFlow.TestRenderer PRIVATE ff_core ff_timing ff_telemetry ff_ipc ff_graphics d3d11 dxgi user32 shell32)
+if(MSVC)
+    target_link_options(FrameFlow.TestRenderer PRIVATE /ENTRY:wWinMainCRTStartup)
+else()
+    target_link_options(FrameFlow.TestRenderer PRIVATE -municode)
+endif()

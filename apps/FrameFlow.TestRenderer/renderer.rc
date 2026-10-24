@@ -1,0 +1,2 @@
+// Window/taskbar icon so the test renderer looks like a real, identifiable app in the game card.
+1 ICON "renderer.ico"

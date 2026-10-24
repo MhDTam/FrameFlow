@@ -1,0 +1,77 @@
+name: Windows build and release
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Build
+        shell: cmd
+        run: build.bat nopause
+      - name: Native tests
+        shell: cmd
+        run: test.bat nopause
+      - name: Check release version
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        run: |
+          $version = $env:GITHUB_REF_NAME.Substring(1)
+          $cmake = Get-Content CMakeLists.txt -Raw
+          $project = Get-Content apps/FrameFlow.UI/FrameFlow.UI.csproj -Raw
+          if ($cmake -notmatch "project\(FrameFlow VERSION $([regex]::Escape($version)) ") { throw 'CMake version does not match tag' }
+          if ($project -notmatch "<Version>$([regex]::Escape($version))</Version>") { throw 'UI version does not match tag' }
+      - name: Package portable release
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        run: |
+          ./tools/package-portable.ps1 -SkipBuild -Version $env:GITHUB_REF_NAME.Substring(1)
+          ./tools/package-portable.ps1 -SkipBuild -Lite -Version $env:GITHUB_REF_NAME.Substring(1)
+      - name: Upload build artifact
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: actions/upload-artifact@v4
+        with:
+          name: FrameFlow-portable
+          path: |
+            dist/FrameFlow-v*-Portable.zip
+            dist/FrameFlow-v*-Portable.zip.sha256
+            dist/FrameFlow-v*-Lite.zip
+            dist/FrameFlow-v*-Lite.zip.sha256
+          if-no-files-found: error
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: windows-2022
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: FrameFlow-portable
+          path: dist
+      - name: Create release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $version = $env:GITHUB_REF_NAME.Substring(1)
+          $zip = "dist/FrameFlow-v$version-Portable.zip"
+          $checksum = "$zip.sha256"
+          $lite = "dist/FrameFlow-v$version-Lite.zip"
+          $liteChecksum = "$lite.sha256"
+          if (-not (Test-Path $zip) -or -not (Test-Path $checksum) -or -not (Test-Path $lite) -or -not (Test-Path $liteChecksum)) { throw 'Release files missing' }
+          gh release create $env:GITHUB_REF_NAME $zip $checksum $lite $liteChecksum --verify-tag --title "FrameFlow $version" --notes-file docs/RELEASE_NOTES.md

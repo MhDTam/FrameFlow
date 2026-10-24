@@ -1,0 +1,15 @@
+bin/
+build/
+dist/
+logs/
+**/bin/
+**/obj/
+.vs/
+*.user
+*.suo
+*.pdb
+*.log
+*.trx
+.DS_Store
+launch-how-to-fish.bat
+own-mini-visual.txt

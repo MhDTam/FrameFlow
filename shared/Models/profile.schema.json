@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "FrameFlow game profile",
+  "type": "object",
+  "required": ["exe"],
+  "properties": {
+    "schema": { "const": 1 },
+    "profileId": { "type": "string" },
+    "game": { "type": "string" },
+    "exe": { "type": "string" },
+    "exePath": { "type": "string" },
+    "fpsLimit": { "type": "number", "minimum": 10, "maximum": 1000 },
+    "framePacing": { "type": "boolean" },
+    "pacingMode": { "enum": ["Efficiency", "Balanced", "Precision"] },
+    "startWithGame": { "type": "boolean" },
+    "manual": { "type": "boolean" },
+    "lastDetected": { "type": "integer", "description": "Unix seconds" }
+  }
+}

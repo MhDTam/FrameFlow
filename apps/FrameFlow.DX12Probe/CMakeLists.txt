@@ -1,0 +1,7 @@
+add_executable(FrameFlow.DX12Probe WIN32 main.cpp)
+target_link_libraries(FrameFlow.DX12Probe PRIVATE ff_core ff_ipc ff_timing ff_telemetry d3d12 dxgi user32 shell32)
+if(MSVC)
+    target_link_options(FrameFlow.DX12Probe PRIVATE /ENTRY:wWinMainCRTStartup)
+else()
+    target_link_options(FrameFlow.DX12Probe PRIVATE -municode)
+endif()

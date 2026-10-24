@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="FrameFlow.UI.Views.SettingsView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <UserControl.Resources>
+        <Style x:Key="RowTitle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="FontWeight" Value="Medium" />
+            <Setter Property="Foreground" Value="{StaticResource FfInkBrush}" />
+        </Style>
+        <Style x:Key="RowHint" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="{StaticResource FfInk3Brush}" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="Margin" Value="0,2,0,0" />
+        </Style>
+        <Style x:Key="SectionTitle" TargetType="TextBlock" BasedOn="{StaticResource FfLabel}">
+            <Setter Property="Margin" Value="4,0,0,8" />
+        </Style>
+    </UserControl.Resources>
+
+    <Grid RowSpacing="14">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <StackPanel Orientation="Horizontal" Spacing="10">
+            <Button Style="{StaticResource FfGhostButton}" Click="OnBack" AutomationProperties.Name="Back">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <FontIcon Glyph="&#xE76B;" FontSize="12" />
+                    <TextBlock Text="Back" />
+                </StackPanel>
+            </Button>
+            <TextBlock Text="Settings" FontFamily="{StaticResource FfDisplayFont}" FontSize="20" FontWeight="SemiBold"
+                       Foreground="{StaticResource FfInkBrush}" VerticalAlignment="Center" />
+        </StackPanel>
+
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="0,0,6,0">
+            <Grid ColumnSpacing="14">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <!-- Left column -->
+                <StackPanel Spacing="14">
+                    <StackPanel>
+                        <TextBlock Text="GENERAL" Style="{StaticResource SectionTitle}" />
+                        <Border Style="{StaticResource FfCard}" Padding="22,6">
+                            <StackPanel>
+                                <Grid Padding="0,12">
+                                    <StackPanel Margin="0,0,64,0">
+                                        <TextBlock Text="Start with Windows" Style="{StaticResource RowTitle}" />
+                                        <TextBlock Text="Launch FrameFlow when you sign in. No administrator rights needed." Style="{StaticResource RowHint}" />
+                                    </StackPanel>
+                                    <ToggleSwitch x:Name="StartWithWindows" HorizontalAlignment="Right" OnContent="" OffContent="" MinWidth="0"
+                                                  Toggled="OnStartWithWindows" AutomationProperties.Name="Start with Windows" />
+                                </Grid>
+                                <Border Height="1" Background="{StaticResource FfLineBrush}" />
+                                <Grid Padding="0,12">
+                                    <StackPanel Margin="0,0,64,0">
+                                        <TextBlock Text="Start minimized" Style="{StaticResource RowTitle}" />
+                                        <TextBlock Text="When started with Windows, stay out of the way until needed." Style="{StaticResource RowHint}" />
+                                    </StackPanel>
+                                    <ToggleSwitch x:Name="StartMinimized" HorizontalAlignment="Right" OnContent="" OffContent="" MinWidth="0"
+                                                  Toggled="OnStartMinimized" AutomationProperties.Name="Start minimized" />
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <StackPanel>
+                        <TextBlock Text="PERFORMANCE" Style="{StaticResource SectionTitle}" />
+                        <Border Style="{StaticResource FfCard}" Padding="22,6">
+                            <StackPanel>
+                                <Grid Padding="0,12">
+                                    <StackPanel Margin="0,0,156,0">
+                                        <TextBlock Text="Default FPS limit" Style="{StaticResource RowTitle}" />
+                                        <TextBlock Text="Used for games FrameFlow has not seen before." Style="{StaticResource RowHint}" />
+                                    </StackPanel>
+                                    <NumberBox x:Name="DefaultFps" HorizontalAlignment="Right" Width="110" Minimum="10" Maximum="1000"
+                                               SmallChange="1" LargeChange="10" SpinButtonPlacementMode="Compact" ValueChanged="OnDefaultFps"
+                                               AutomationProperties.Name="Default FPS limit" />
+                                </Grid>
+                                <Border Height="1" Background="{StaticResource FfLineBrush}" />
+                                <Grid Padding="0,12">
+                                    <StackPanel Margin="0,0,156,0">
+                                        <TextBlock Text="Default pacing mode" Style="{StaticResource RowTitle}" />
+                                        <TextBlock Text="Balanced suits almost every game." Style="{StaticResource RowHint}" />
+                                    </StackPanel>
+                                    <ComboBox x:Name="DefaultMode" HorizontalAlignment="Right" Width="140" SelectionChanged="OnDefaultMode"
+                                              AutomationProperties.Name="Default pacing mode">
+                                        <x:String>Efficiency</x:String>
+                                        <x:String>Balanced</x:String>
+                                        <x:String>Precision</x:String>
+                                    </ComboBox>
+                                </Grid>
+                                <Border Height="1" Background="{StaticResource FfLineBrush}" />
+                                <Grid Padding="0,12">
+                                    <StackPanel Margin="0,0,156,0">
+                                        <TextBlock Text="Telemetry window" Style="{StaticResource RowTitle}" />
+                                        <TextBlock Text="History used for the graph, average FPS and 1% low." Style="{StaticResource RowHint}" />
+                                    </StackPanel>
+                                    <ComboBox x:Name="TelemetryWindow" HorizontalAlignment="Right" Width="140" SelectionChanged="OnTelemetryWindow"
+                                              AutomationProperties.Name="Telemetry window">
+                                        <x:String>30 seconds</x:String>
+                                        <x:String>60 seconds</x:String>
+                                    </ComboBox>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- Right column -->
+                <StackPanel Grid.Column="1" Spacing="14">
+                    <StackPanel>
+                        <TextBlock Text="DETECTION" Style="{StaticResource SectionTitle}" />
+                        <Border Style="{StaticResource FfCard}" Padding="22,6,22,16">
+                            <StackPanel>
+                                <Grid Padding="0,12">
+                                    <StackPanel Margin="0,0,64,0">
+                                        <TextBlock Text="Automatic game detection" Style="{StaticResource RowTitle}" />
+                                        <TextBlock Text="Recognise games from their window, graphics API and install location." Style="{StaticResource RowHint}" />
+                                    </StackPanel>
+                                    <ToggleSwitch x:Name="AutoDetect" HorizontalAlignment="Right" OnContent="" OffContent="" MinWidth="0"
+                                                  Toggled="OnAutoDetect" AutomationProperties.Name="Automatic game detection" />
+                                </Grid>
+                                <Border Height="1" Background="{StaticResource FfLineBrush}" />
+                                <TextBlock Text="Excluded applications" Style="{StaticResource RowTitle}" Margin="0,12,0,0" />
+                                <TextBlock x:Name="BuiltInHint" Style="{StaticResource RowHint}" />
+                                <ItemsControl x:Name="ExclusionList" Margin="0,10,0,0" />
+                                <Grid ColumnSpacing="8" Margin="0,8,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox x:Name="NewExclusion" PlaceholderText="app.exe" KeyDown="OnExclusionKeyDown"
+                                             AutomationProperties.Name="Application to exclude" />
+                                    <Button Grid.Column="1" Content="Add" Style="{StaticResource FfSoftButton}" Padding="16,5" Click="OnAddExclusion" />
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <StackPanel>
+                        <TextBlock Text="ABOUT" Style="{StaticResource SectionTitle}" />
+                        <Border Style="{StaticResource FfCard}" Padding="22,14">
+                            <Grid>
+                                <StackPanel Margin="0,0,16,0">
+                                    <TextBlock x:Name="AboutVersion" Text="FrameFlow" Style="{StaticResource RowTitle}" />
+                                    <TextBlock x:Name="AboutDescription" Text="Runs locally. No account, no analytics, nothing uploaded." Style="{StaticResource RowHint}" />
+                                </StackPanel>
+                                <Button HorizontalAlignment="Right" VerticalAlignment="Center" Content="Open data folder"
+                                        Style="{StaticResource FfSoftButton}" Padding="14,6" Click="OnOpenDataFolder" />
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+                </StackPanel>
+            </Grid>
+        </ScrollViewer>
+    </Grid>
+</UserControl>
