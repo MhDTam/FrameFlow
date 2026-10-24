@@ -21,6 +21,11 @@ jobs:
       - name: Build
         shell: cmd
         run: build.bat nopause
+      - name: Show build diagnostics
+        if: failure()
+        shell: pwsh
+        run: |
+          if (Test-Path logs/build.log) { Get-Content logs/build.log -Tail 120 }
       - name: Native tests
         shell: cmd
         run: test.bat nopause
