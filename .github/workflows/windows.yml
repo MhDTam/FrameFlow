@@ -39,16 +39,37 @@ jobs:
         run: |
           ./tools/package-portable.ps1 -SkipBuild -Version $env:GITHUB_REF_NAME.Substring(1)
           ./tools/package-portable.ps1 -SkipBuild -Lite -Version $env:GITHUB_REF_NAME.Substring(1)
+      - name: Install Inno Setup compiler
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        run: |
+          $toolDir = Join-Path $env:RUNNER_TEMP 'inno-7.1'
+          New-Item -ItemType Directory -Path $toolDir -Force | Out-Null
+          $installer = Join-Path $toolDir 'innosetup-7.1.0-x64.exe'
+          Invoke-WebRequest 'https://github.com/jrsoftware/issrc/releases/download/is-7_1_0/innosetup-7.1.0-x64.exe' -OutFile $installer
+          $expected = '0362a383ed217d4c4239b5933866dd96d3eb2102737da92f80f6057a4b40df2f'
+          if ((Get-FileHash $installer -Algorithm SHA256).Hash.ToLowerInvariant() -ne $expected) { throw 'Inno Setup checksum mismatch' }
+          $p = Start-Process -FilePath $installer -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/CURRENTUSER','/NOICONS',("/DIR="+$toolDir)) -Wait -PassThru -WindowStyle Hidden
+          if ($p.ExitCode -ne 0) { throw "Inno Setup installation failed: $($p.ExitCode)" }
+          $iscc = Join-Path $toolDir 'ISCC.exe'
+          if (-not (Test-Path $iscc)) { throw 'ISCC.exe missing' }
+          "ISCC_PATH=$iscc" >> $env:GITHUB_ENV
+      - name: Package Windows installer
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        run: ./tools/package-installer.ps1 -Version $env:GITHUB_REF_NAME.Substring(1) -IsccPath $env:ISCC_PATH
       - name: Upload build artifact
         if: startsWith(github.ref, 'refs/tags/v')
         uses: actions/upload-artifact@v4
         with:
-          name: FrameFlow-portable
+          name: FrameFlow-release
           path: |
             dist/FrameFlow-v*-Portable.zip
             dist/FrameFlow-v*-Portable.zip.sha256
             dist/FrameFlow-v*-Lite.zip
             dist/FrameFlow-v*-Lite.zip.sha256
+            dist/FrameFlow-v*-Setup.exe
+            dist/FrameFlow-v*-Setup.exe.sha256
           if-no-files-found: error
 
   release:
@@ -61,7 +82,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
-          name: FrameFlow-portable
+          name: FrameFlow-release
           path: dist
       - name: Create release
         shell: pwsh
@@ -73,5 +94,7 @@ jobs:
           $checksum = "$zip.sha256"
           $lite = "dist/FrameFlow-v$version-Lite.zip"
           $liteChecksum = "$lite.sha256"
-          if (-not (Test-Path $zip) -or -not (Test-Path $checksum) -or -not (Test-Path $lite) -or -not (Test-Path $liteChecksum)) { throw 'Release files missing' }
-          gh release create $env:GITHUB_REF_NAME $zip $checksum $lite $liteChecksum --verify-tag --title "FrameFlow $version" --notes-file docs/RELEASE_NOTES.md
+          $setup = "dist/FrameFlow-v$version-Setup.exe"
+          $setupChecksum = "$setup.sha256"
+          if (-not (Test-Path $zip) -or -not (Test-Path $checksum) -or -not (Test-Path $lite) -or -not (Test-Path $liteChecksum) -or -not (Test-Path $setup) -or -not (Test-Path $setupChecksum)) { throw 'Release files missing' }
+          gh release create $env:GITHUB_REF_NAME $zip $checksum $lite $liteChecksum $setup $setupChecksum --verify-tag --title "FrameFlow $version" --notes-file docs/RELEASE_NOTES.md

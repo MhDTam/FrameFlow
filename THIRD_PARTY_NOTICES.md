@@ -14,5 +14,7 @@ Third-party components retain their own licenses.
 - **System.Drawing.Common**: package version `8.0.31` uses MIT terms. Its terms and notices are
   in `third_party/system-drawing-common/` (portable ZIP: `licenses/SystemDrawing-LICENSE.txt`
   and `licenses/SystemDrawing-NOTICE.txt`).
+- **Inno Setup**: the optional Windows installer is built with Inno Setup 7.1. Its license is in
+  `third_party/inno-setup/LICENSE.txt` and is included in the installed `licenses/` folder.
 
 If you redistribute a modified build, keep the applicable notices with it.

@@ -47,6 +47,7 @@ build.bat            native engine + tools (CMake/Ninja/MSVC) and the WinUI app,
 test.bat             unit tests (CTest)
 benchmark.bat        timing benchmark, writes docs\benchmark-report.md
 package-portable.bat builds the standalone ZIP distribution in dist\
+tools\package-installer.ps1 builds a compressed Windows Setup EXE from the standalone package
 run.bat              starts FrameFlow (the UI starts the engine)
 run-testrenderer.bat starts the DX11 test renderer; FrameFlow detects and paces it
 bin\FrameFlow.Launch.exe "C:\path\to\game.exe" [arguments]  optional early-hook launch for x64 DX11/DX12 games
@@ -69,6 +70,11 @@ necessarily mean that its frame limit is active. Verify **Frame Pacing** and liv
 For a smaller download, the release also includes `FrameFlow-v1.0.0-Lite.zip`. It requires the
 x64 .NET 8 Runtime already installed. Windows App SDK Runtime 1.7 is included in both ZIPs. The
 standalone Portable ZIP also includes .NET 8 and is the safer choice for machines without it.
+
+`FrameFlow-v1.0.0-Setup.exe` is a compressed, per-user Windows installer that includes both
+runtimes. It installs shortcuts and an uninstaller without administrator rights. Settings and
+profiles for this edition are stored under `%LOCALAPPDATA%\FrameFlow` and remain after uninstall.
+The installer is not code-signed.
 
 ## Layout
 
@@ -103,7 +109,7 @@ account and no analytics.
 ## Publishing
 
 GitHub Actions builds and tests every pull request and push. Pushing a `v1.0.0` tag creates a
-GitHub Release with the Portable and Lite ZIPs and SHA-256 checksums. The tag version must match the version
+GitHub Release with the Setup EXE, Portable and Lite ZIPs, and SHA-256 checksums. The tag version must match the version
 in `CMakeLists.txt` and `apps/FrameFlow.UI/FrameFlow.UI.csproj`.
 
 FrameFlow's original source and assets are open source under the [MIT license](LICENSE). See
