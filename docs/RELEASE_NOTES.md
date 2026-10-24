@@ -13,7 +13,7 @@ and shows live frametime statistics when a compatible DX11/DX12 session is activ
 limiting is available only when selected explicitly. Games with detected anti-cheat are skipped
 by default; game compatibility varies.
 
-The SHA-256 file next to each ZIP can be used to verify the download.
+The SHA-256 file next to each download can be used to verify it.
 
 FrameFlow's original code and assets are MIT-licensed. Third-party components retain their own
-licenses; see `LICENSE` and `THIRD_PARTY_NOTICES.md` inside the ZIP.
+licenses; see `LICENSE` and `THIRD_PARTY_NOTICES.md` inside the installed folder or ZIP.
