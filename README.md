@@ -2,6 +2,10 @@
 
 Smooth Frames. Better Games.
 
+![FrameFlow 1.0.0 main window, running with no game selected](docs/frameflow-main.png)
+
+*FrameFlow main window before selecting a game.*
+
 FrameFlow is a lightweight Windows utility that limits a game's frame rate on an absolute,
 drift-free timeline so frames arrive evenly spaced. It detects the running game, remembers a
 profile per game, and shows live frametime statistics. Protected games are skipped by default.
