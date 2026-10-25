@@ -269,6 +269,12 @@ int wmain(int argc, wchar_t** argv)
         DWORD length = static_cast<DWORD>(std::size(actual));
         const bool sameImage = ::QueryFullProcessImageNameW(process, 0, actual, &length) &&
                                _wcsicmp(actual, exe.c_str()) == 0;
+        if (sameImage && diagnoseUnsafe && RemoteModule(pid, L"gameoverlayrenderer64.dll")) {
+            ::CloseHandle(process);
+            std::wcerr << L"Steam Overlay is still loaded in this game. Disable it for Euro Truck "
+                          L"in Steam properties and restart the game before diagnostic attachment.\n";
+            return 9;
+        }
         HANDLE diagnostics = nullptr;
         if (sameImage && diagnoseUnsafe) {
             const std::wstring name = L"Local\\FrameFlow.HookDiagnostics." + std::to_wstring(pid);
