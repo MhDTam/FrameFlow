@@ -252,8 +252,13 @@
                             <TextBlock x:Name="CaptureStatus" FontSize="11.5" Foreground="{StaticResource FfInk2Brush}" VerticalAlignment="Center" Visibility="Collapsed" />
                             <Button x:Name="CancelCaptureButton" Content="Cancel" Style="{StaticResource FfGhostButton}" Padding="6,2"
                                     Click="OnCancelCapture" Visibility="Collapsed" AutomationProperties.Name="Cancel scheduled screenshot" />
-                            <Button x:Name="CaptureButton" Content="Capture" Style="{StaticResource FfGhostButton}" Padding="8,2"
-                                    AutomationProperties.Name="Schedule screenshot">
+                            <Button x:Name="CaptureButton" Style="{StaticResource FfSoftButton}" Padding="12,5" MinHeight="32"
+                                    ToolTipService.ToolTip="Save a screenshot of FrameFlow and its live graph after a delay"
+                                    AutomationProperties.Name="Timed screenshot">
+                                <StackPanel Orientation="Horizontal" Spacing="7">
+                                    <FontIcon Glyph="&#xE722;" FontSize="13" />
+                                    <TextBlock Text="Timed screenshot" FontSize="12.5" FontWeight="SemiBold" />
+                                </StackPanel>
                                 <Button.Flyout>
                                     <Flyout x:Name="CaptureFlyout" Placement="BottomEdgeAlignedRight">
                                         <StackPanel Spacing="10" Width="210">

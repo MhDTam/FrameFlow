@@ -178,7 +178,7 @@ The mini follows the game window and hides when the game is minimized or no long
 It works with windowed and borderless presentation; exclusive fullscreen can cover desktop windows,
 so the mini is not guaranteed there. FrameFlow's full graph remains in the main window.
 
-To save the live graph while staying in the game, click **Capture** beside **Frametime Stability**,
+To save the live graph while staying in the game, click **Timed screenshot** beside **Frametime Stability**,
 choose a delay from 1 to 600 seconds, and click **Start countdown**. Return to the game; the
 running FrameFlow window saves its own UI to `Pictures\FrameFlow` after the delay, even if minimized.
 The same menu opens the screenshots folder. Captures require the running UI to be connected to
