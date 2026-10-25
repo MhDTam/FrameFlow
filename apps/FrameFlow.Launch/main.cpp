@@ -195,13 +195,20 @@ bool PauseAtEntry(const PROCESS_INFORMATION& child)
 
 int wmain(int argc, wchar_t** argv)
 {
-    const bool allowProtected = argc > 1 && std::wcscmp(argv[1], L"--allow-protected") == 0;
-    const int first = allowProtected ? 2 : 1;
+    bool allowProtected = false;
+    bool diagnoseUnsafe = false;
+    int first = 1;
+    while (first < argc) {
+        if (std::wcscmp(argv[first], L"--allow-protected") == 0 && !allowProtected) allowProtected = true;
+        else if (std::wcscmp(argv[first], L"--diagnose-unsafe") == 0 && !diagnoseUnsafe) diagnoseUnsafe = true;
+        else break;
+        ++first;
+    }
     const bool attach = argc > first && std::wcscmp(argv[first], L"--attach") == 0;
     const int exeArg = attach ? first + 2 : first;
-    if (argc <= exeArg) {
+    if (argc <= exeArg || (diagnoseUnsafe && !attach)) {
         std::wcerr << L"Usage: FrameFlow.Launch.exe [--allow-protected] <game.exe> [arguments...]\n"
-                   << L"       FrameFlow.Launch.exe [--allow-protected] --attach <pid> <game.exe>\n";
+                   << L"       FrameFlow.Launch.exe [--allow-protected] [--diagnose-unsafe] --attach <pid> <game.exe>\n";
         return 2;
     }
     const std::filesystem::path exe = std::filesystem::absolute(argv[exeArg]);
@@ -209,11 +216,14 @@ int wmain(int argc, wchar_t** argv)
         std::wcerr << L"Game executable not found.\n";
         return 2;
     }
-    if (ff::process::IsKnownUnsafeHookTarget(ff::core::WideToUtf8(exe.filename().wstring()))) {
+    if (ff::process::IsKnownUnsafeHookTarget(ff::core::WideToUtf8(exe.filename().wstring())) && !diagnoseUnsafe) {
         std::wcerr << L"FrameFlow's DXGI hook is disabled for this game after repeated crashes. "
-                      L"Start the game from Steam and choose the NVIDIA limiter manually if available.\n";
+                      L"Start the game from Steam and choose the NVIDIA limiter manually if available. "
+                      L"A diagnostic attach requires --diagnose-unsafe.\n";
         return 8;
     }
+    if (diagnoseUnsafe)
+        std::wcerr << L"Diagnostic attach: this game has crashed with FrameFlow before.\n";
     const auto hit = ff::process::DetectAntiCheat(ff::core::WideToUtf8(exe.filename().wstring()), {},
         RunningNames(), ff::process::CollectNearbyFiles(exe.wstring()));
     if (hit && !allowProtected) {
@@ -259,7 +269,18 @@ int wmain(int argc, wchar_t** argv)
         DWORD length = static_cast<DWORD>(std::size(actual));
         const bool sameImage = ::QueryFullProcessImageNameW(process, 0, actual, &length) &&
                                _wcsicmp(actual, exe.c_str()) == 0;
+        HANDLE diagnostics = nullptr;
+        if (sameImage && diagnoseUnsafe) {
+            const std::wstring name = L"Local\\FrameFlow.HookDiagnostics." + std::to_wstring(pid);
+            diagnostics = ::CreateEventW(nullptr, TRUE, FALSE, name.c_str());
+            if (!diagnostics) {
+                ::CloseHandle(process);
+                std::wcerr << L"Could not enable hook diagnostics.\n";
+                return 5;
+            }
+        }
         const bool injected = sameImage && Inject(process, pid, dll.wstring());
+        if (diagnostics) ::CloseHandle(diagnostics);
         ::CloseHandle(process);
         if (!injected) {
             std::wcerr << L"Could not attach to the running game. It may reject external hooks.\n";

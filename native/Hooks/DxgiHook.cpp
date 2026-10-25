@@ -2,6 +2,7 @@
 // Import hooks discover swap chains; their vtables are patched in this process only.
 #include "Graphics/PresentPacer.h"
 #include "Core/Log.h"
+#include "Core/Strings.h"
 #include "Timing/Clock.h"
 
 #include <windows.h>
@@ -43,6 +44,35 @@ IDXGISwapChain* g_primary = nullptr; // identity only: never dereferenced after 
 LARGE_INTEGER g_lastPrimary{};
 LARGE_INTEGER g_frequency{};
 std::atomic<bool> g_running{true};
+std::atomic<unsigned> g_presentSamples{0};
+std::atomic<bool> g_diagnostics{false};
+thread_local unsigned g_presentDepth = 0;
+
+struct PresentDepthScope {
+    PresentDepthScope() { ++g_presentDepth; }
+    ~PresentDepthScope() { --g_presentDepth; }
+};
+
+std::string DescribeAddress(const void* address)
+{
+    HMODULE module = nullptr;
+    if (!::GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
+        GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+        reinterpret_cast<LPCWSTR>(address), &module)) return "unknown";
+    wchar_t path[MAX_PATH]{};
+    if (!::GetModuleFileNameW(module, path, MAX_PATH)) return "unknown";
+    const wchar_t* name = std::wcsrchr(path, L'\\');
+    return std::format("{}+{:#x}", ff::core::WideToUtf8(name ? name + 1 : path),
+        reinterpret_cast<std::uintptr_t>(address) - reinterpret_cast<std::uintptr_t>(module));
+}
+
+void LogReentryStack()
+{
+    void* frames[16]{};
+    const USHORT count = ::CaptureStackBackTrace(0, static_cast<DWORD>(std::size(frames)), frames, nullptr);
+    for (USHORT i = 0; i < count; ++i)
+        FF_LOG_INFO("Present reentry stack {}: {}", i, DescribeAddress(frames[i]));
+}
 
 template<class F> F Original(void** slot, F fallback = nullptr)
 {
@@ -103,14 +133,29 @@ std::shared_ptr<ff::graphics::PresentPacer> BeforePresent(IDXGISwapChain* chain,
 
 HRESULT STDMETHODCALLTYPE HookPresent(IDXGISwapChain* self, UINT interval, UINT flags) noexcept
 {
+    const unsigned depth = g_presentDepth;
+    PresentDepthScope depthScope;
     const auto hookEntry = ff::timing::Clock::Now();
     auto original = Original(reinterpret_cast<void***>(self)[0] + 8, static_cast<Present>(nullptr));
     if (!original) return E_FAIL;
+    const bool diagnostics = g_diagnostics.load(std::memory_order_relaxed);
+    const unsigned sample = diagnostics ? g_presentSamples.fetch_add(1, std::memory_order_relaxed) : 3;
+    if (diagnostics && sample < 3) {
+        try { FF_LOG_INFO("Present sample {}: depth {}, chain {}, original {} ({}), flags {}, interval {}",
+                          sample, depth, static_cast<void*>(self), reinterpret_cast<void*>(original),
+                          DescribeAddress(reinterpret_cast<void*>(original)), flags, interval);
+              if (depth == 1) LogReentryStack(); }
+        catch (...) {}
+    }
     std::shared_ptr<ff::graphics::PresentPacer> paced;
     if (!(flags & DXGI_PRESENT_TEST)) {
         try { paced = BeforePresent(self, hookEntry); } catch (...) { /* fail open */ }
     }
     const HRESULT hr = original(self, interval, flags);
+    if (diagnostics && sample < 3) {
+        try { FF_LOG_INFO("Present sample {} returned HRESULT {:#x}", sample, static_cast<unsigned>(hr)); }
+        catch (...) {}
+    }
     if (paced) {
         try { std::scoped_lock lock(g_waitMutex); paced->AfterPresent(); } catch (...) { /* fail open */ }
     }
@@ -120,14 +165,29 @@ HRESULT STDMETHODCALLTYPE HookPresent(IDXGISwapChain* self, UINT interval, UINT 
 HRESULT STDMETHODCALLTYPE HookPresent1(IDXGISwapChain1* self, UINT interval, UINT flags,
     const DXGI_PRESENT_PARAMETERS* params) noexcept
 {
+    const unsigned depth = g_presentDepth;
+    PresentDepthScope depthScope;
     const auto hookEntry = ff::timing::Clock::Now();
     auto original = Original(reinterpret_cast<void***>(self)[0] + 22, static_cast<Present1>(nullptr));
     if (!original) return E_FAIL;
+    const bool diagnostics = g_diagnostics.load(std::memory_order_relaxed);
+    const unsigned sample = diagnostics ? g_presentSamples.fetch_add(1, std::memory_order_relaxed) : 3;
+    if (diagnostics && sample < 3) {
+        try { FF_LOG_INFO("Present1 sample {}: depth {}, chain {}, original {} ({}), flags {}, interval {}",
+                          sample, depth, static_cast<void*>(self), reinterpret_cast<void*>(original),
+                          DescribeAddress(reinterpret_cast<void*>(original)), flags, interval);
+              if (depth == 1) LogReentryStack(); }
+        catch (...) {}
+    }
     std::shared_ptr<ff::graphics::PresentPacer> paced;
     if (!(flags & DXGI_PRESENT_TEST)) {
         try { paced = BeforePresent(self, hookEntry); } catch (...) { /* fail open */ }
     }
     const HRESULT hr = original(self, interval, flags, params);
+    if (diagnostics && sample < 3) {
+        try { FF_LOG_INFO("Present1 sample {} returned HRESULT {:#x}", sample, static_cast<unsigned>(hr)); }
+        catch (...) {}
+    }
     if (paced) {
         try { std::scoped_lock lock(g_waitMutex); paced->AfterPresent(); } catch (...) { /* fail open */ }
     }
@@ -391,6 +451,11 @@ DWORD WINAPI Worker(void* self)
 {
     ff::core::Log::Initialize(L"hook");
     ::QueryPerformanceFrequency(&g_frequency);
+    const std::wstring diagnosticsName = L"Local\\FrameFlow.HookDiagnostics." +
+        std::to_wstring(::GetCurrentProcessId());
+    HANDLE diagnostics = ::OpenEventW(SYNCHRONIZE, FALSE, diagnosticsName.c_str());
+    g_diagnostics = diagnostics != nullptr;
+    if (diagnostics) ::CloseHandle(diagnostics);
     // Keep this module loaded for the lifetime of the game: patched import/vtable entries point here.
     HMODULE pinned = nullptr;
     ::GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_PIN,

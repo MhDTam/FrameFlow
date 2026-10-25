@@ -12,3 +12,11 @@ Hard rules:
 * The module is pinned for the game process lifetime because import and vtable entries point into it.
   Runtime detach is not supported yet.
 * Talks to the engine only through `IPC/SharedSession` — never loads paths or DLLs received from outside.
+
+Euro Truck Simulator 2 is blocked from automatic attachment after repeated crashes. To investigate
+it, enable Windows Error Reporting minidumps with `tools/ets2-crash-dump.ps1 -Action Enable`,
+launch the game normally through Steam, then run `tools/diagnose-ets2.ps1` while it is running.
+The diagnostic script explicitly opts into the known-unsafe late attach; it does not change the
+normal game's profile or bypass protected-game checks. After testing, run
+`tools/ets2-crash-dump.ps1 -Action Disable`. Dumps are written under `%LOCALAPPDATA%\FrameFlow\CrashDumps\`
+and can contain private process data; do not upload them with a public issue.
