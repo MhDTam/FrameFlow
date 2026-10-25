@@ -94,10 +94,10 @@
                     </Border>
                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
                         <TextBlock Text="CURRENT GAME" Style="{StaticResource FfLabel}" />
-                        <TextBlock x:Name="GameName" Text="Looking for a game…" FontFamily="{StaticResource FfDisplayFont}" FontSize="22" FontWeight="SemiBold"
+                        <TextBlock x:Name="GameName" Text="No game running" FontFamily="{StaticResource FfDisplayFont}" FontSize="22" FontWeight="SemiBold"
                                    Foreground="{StaticResource FfInkBrush}" Margin="0,4,0,0" TextTrimming="CharacterEllipsis" />
                         <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,3,0,0">
-                            <TextBlock x:Name="GameExe" Text="Start a game, or choose one manually" Style="{StaticResource FfBody}" FontSize="13.5" VerticalAlignment="Center" />
+                            <TextBlock x:Name="GameExe" Text="Start a game; FrameFlow will detect it automatically" Style="{StaticResource FfBody}" FontSize="13.5" VerticalAlignment="Center" />
                             <Ellipse x:Name="GameMetaDot" Width="3" Height="3" Fill="{StaticResource FfInk3Brush}" Opacity="0.6" VerticalAlignment="Center" Visibility="Collapsed" />
                             <StackPanel x:Name="GameStatus" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" Visibility="Collapsed">
                                 <Grid Width="14" Height="14">
@@ -111,7 +111,7 @@
                                    Margin="0,4,0,0" TextTrimming="CharacterEllipsis" Visibility="Collapsed" />
                     </StackPanel>
                     <Button x:Name="LaunchGameButton" Grid.Column="2" Style="{StaticResource FfSoftButton}" VerticalAlignment="Center" Padding="15,9" FontSize="13.5" CornerRadius="10" Visibility="Collapsed"
-                            Click="OnLaunchGame" Content="Launch Game" AutomationProperties.Name="Launch selected game with FrameFlow" />
+                            Click="OnLaunchGame" Content="Launch Last Game" AutomationProperties.Name="Launch last selected game with FrameFlow" />
                     <Button x:Name="ProtectedRiskButton" Grid.Column="2" Style="{StaticResource FfSoftButton}" VerticalAlignment="Center" Padding="12,9" FontSize="12" CornerRadius="10" Visibility="Collapsed"
                             Click="OnProtectedRisk" Content="Play at your own risk" />
                     <Button x:Name="ChangeGameButton" Grid.Column="3" Style="{StaticResource FfSoftButton}" VerticalAlignment="Center" Padding="15,9" FontSize="13.5" CornerRadius="10"
@@ -321,7 +321,7 @@
             <ToggleButton x:Name="MiniOverlayButton" Grid.Column="5" VerticalAlignment="Center" Click="OnMiniOverlayClick"
                           Content="Mini OSD" ToolTipService.ToolTip="Show FrameFlow's FPS and frametime graph over the selected game. No other app required." />
             <StackPanel Grid.Column="5" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center" Visibility="Collapsed">
-                <TextBlock x:Name="VersionText" Text="v1.0.0" FontSize="11.5" Foreground="{StaticResource FfInk3Brush}" />
+                <TextBlock x:Name="VersionText" Text="v1.0.1" FontSize="11.5" Foreground="{StaticResource FfInk3Brush}" />
                 <Ellipse x:Name="EngineDot" Width="6" Height="6" Fill="{StaticResource FfGreenBrush}" VerticalAlignment="Center" />
                 <TextBlock x:Name="EngineText" Text="Ready" FontSize="11.5" Foreground="{StaticResource FfInk3Brush}" />
             </StackPanel>

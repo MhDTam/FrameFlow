@@ -5,7 +5,7 @@ namespace FrameFlow.UI.Services;
 public static class AppInfo
 {
     public static string Version { get; } =
-        Assembly.GetExecutingAssembly().GetName().Version is { } v ? $"{v.Major}.{v.Minor}.{v.Build}" : "1.0.0";
+        Assembly.GetExecutingAssembly().GetName().Version is { } v ? $"{v.Major}.{v.Minor}.{v.Build}" : "1.0.1";
 
     public static string ExeDir { get; } = AppContext.BaseDirectory;
     public static string EnginePath => Path.Combine(ExeDir, "FrameFlow.Engine.exe");

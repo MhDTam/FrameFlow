@@ -1,6 +1,7 @@
 // Opt-in x64 DX11/DX12 launcher. The hook is loaded before the game's entry point.
 #include "Core/Strings.h"
 #include "ProcessDetection/AntiCheatDetector.h"
+#include "ProcessDetection/HookCompatibility.h"
 
 #include <windows.h>
 #include <tlhelp32.h>
@@ -207,6 +208,27 @@ int wmain(int argc, wchar_t** argv)
     if (!std::filesystem::exists(exe) || _wcsicmp(exe.extension().c_str(), L".exe") != 0) {
         std::wcerr << L"Game executable not found.\n";
         return 2;
+    }
+    if (ff::process::IsKnownUnsafeHookTarget(ff::core::WideToUtf8(exe.filename().wstring()))) {
+        if (attach) {
+            std::wcerr << L"FrameFlow's DXGI hook is disabled for this game after repeated crashes.\n";
+            return 8;
+        }
+        std::wstring command = Quote(exe.wstring());
+        for (int i = exeArg + 1; i < argc; ++i) command += L" " + Quote(argv[i]);
+        STARTUPINFOW startup{};
+        startup.cb = sizeof(startup);
+        PROCESS_INFORMATION child{};
+        const std::wstring cwd = exe.parent_path().wstring();
+        if (!::CreateProcessW(exe.c_str(), command.data(), nullptr, nullptr, FALSE, 0,
+                              nullptr, cwd.c_str(), &startup, &child)) {
+            std::wcerr << L"Could not start game (Windows error " << ::GetLastError() << L").\n";
+            return 5;
+        }
+        ::CloseHandle(child.hThread);
+        ::CloseHandle(child.hProcess);
+        std::wcerr << L"Game started normally. FrameFlow's DXGI hook is disabled for this game after repeated crashes.\n";
+        return 8;
     }
     const auto hit = ff::process::DetectAntiCheat(ff::core::WideToUtf8(exe.filename().wstring()), {},
         RunningNames(), ff::process::CollectNearbyFiles(exe.wstring()));

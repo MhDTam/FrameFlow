@@ -10,7 +10,7 @@ public sealed record GameInfo(int Pid, string Name, string Exe, string ExePath, 
 
 public sealed record Candidate(int Pid, string Exe, string Title, string ExePath, int Score);
 
-public sealed record Integration(string Status, string Title, string Message, string? AntiCheat, bool RiskAccepted)
+public sealed record Integration(string Status, string Title, string Message, string? AntiCheat, bool RiskAccepted, bool HookBlocked)
 {
     public bool CanPace => Status is "Active" or "Standby";
 }
@@ -65,7 +65,7 @@ public sealed record EngineStatus(
                                               s.Str("profilesDir"), s.Str("logsDir"));
 
         return new EngineStatus(
-            e.Str("version", "1.0.0"),
+            e.Str("version", "1.0.1"),
             e.Num("fpsLimit", 60),
             e.Str("pacingMode", "Balanced"),
             e.Bool("pacingEnabled"),
@@ -73,7 +73,7 @@ public sealed record EngineStatus(
             e.NumList("presets"),
             e.Num("suggestedFps", 60),
             new Integration(integ.Str("status", "None"), integ.Str("title"), integ.Str("message"),
-                            integ.TryGetProperty("antiCheat", out var ac) ? ac.GetString() : null, integ.Bool("riskAccepted")),
+                            integ.TryGetProperty("antiCheat", out var ac) ? ac.GetString() : null, integ.Bool("riskAccepted"), integ.Bool("hookBlocked")),
             game, cands, settings,
             e.Str("limitMethod", "none"),
             e.Str("limitMethodPreference", "auto"),

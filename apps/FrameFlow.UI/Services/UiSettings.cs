@@ -26,7 +26,6 @@ public sealed class UiSettings
             if (File.Exists(AppInfo.UiSettingsFile))
             {
                 var settings = JsonSerializer.Deserialize<UiSettings>(File.ReadAllText(AppInfo.UiSettingsFile)) ?? new UiSettings();
-                if (string.IsNullOrEmpty(settings.LastGamePath)) settings.LastGamePath = FindLatestGameExe();
                 return settings;
             }
         }
@@ -34,29 +33,7 @@ public sealed class UiSettings
         {
             Log.Warn($"ui-settings.json unreadable, using defaults: {ex.Message}");
         }
-        return new UiSettings { LastGamePath = FindLatestGameExe() };
-    }
-
-    private static string FindLatestGameExe()
-    {
-        try
-        {
-            foreach (string profile in Directory.EnumerateFiles(AppInfo.ProfilesDir, "*.json")
-                         .OrderByDescending(File.GetLastWriteTimeUtc))
-            {
-                using var doc = JsonDocument.Parse(File.ReadAllText(profile));
-                if (doc.RootElement.TryGetProperty("exePath", out var value) && value.ValueKind == JsonValueKind.String)
-                {
-                    string? path = value.GetString();
-                    if (!string.IsNullOrEmpty(path) && File.Exists(path)) return path;
-                }
-            }
-        }
-        catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException or DirectoryNotFoundException)
-        {
-            Log.Warn($"Could not load recent game: {ex.Message}");
-        }
-        return "";
+        return new UiSettings();
     }
 
     public void Save()

@@ -2,6 +2,7 @@
 
 #include "ProcessDetection/AntiCheatDetector.h"
 #include "ProcessDetection/GameScorer.h"
+#include "ProcessDetection/HookCompatibility.h"
 
 using namespace ff::process;
 
@@ -29,6 +30,13 @@ TEST(Score_SteamGameIsAGame)
     CHECK(!g.excluded);
     CHECK(g.score >= kGameScoreThreshold);
     CHECK(InferGraphicsApi(SteamGame()) == "DX12");
+}
+
+TEST(HookCompatibility_BlocksObservedEuroTruckCrash)
+{
+    CHECK(IsKnownUnsafeHookTarget("eurotrucks2.exe"));
+    CHECK(IsKnownUnsafeHookTarget("EUROTRUCKS2.EXE"));
+    CHECK(!IsKnownUnsafeHookTarget("Cyberpunk2077.exe"));
 }
 
 TEST(Score_ExcludedAppsNeverScore)

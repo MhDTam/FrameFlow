@@ -1,6 +1,6 @@
 @echo off
 rem Builds and packages the standalone FrameFlow Portable distribution.
-rem Output: dist\FrameFlow-Portable\ and dist\FrameFlow-v1.0.0-Portable.zip
+rem Output: dist\FrameFlow-Portable\ and dist\FrameFlow-v1.0.1-Portable.zip
 setlocal
 cd /d "%~dp0"
 

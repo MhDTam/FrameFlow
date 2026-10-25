@@ -6,6 +6,7 @@
 #include "Display/FpsPresets.h"
 #include "IPC/Protocol.h"
 #include "ProcessDetection/AntiCheatDetector.h"
+#include "ProcessDetection/HookCompatibility.h"
 #include "Telemetry/FrameStatistics.h"
 #include "Timing/Clock.h"
 #include "Timing/FramePacer.h"
@@ -270,6 +271,7 @@ void EngineApp::TryAutoAttach()
     if (!game_ || game_->session || game_->attachAttempted || !game_->accessible ||
         (game_->antiCheat && !game_->profile.allowProtected) ||
         (game_->api != "DX11" && game_->api != "DX12" && game_->api != "DXGI")) return;
+    if (process::IsKnownUnsafeHookTarget(game_->exeName)) return;
     game_->attachAttempted = true;
     wchar_t self[MAX_PATH]{};
     if (!::GetModuleFileNameW(nullptr, self, MAX_PATH)) return;
@@ -573,6 +575,7 @@ Json EngineApp::BuildStatusLocked() const
         ij.Set("antiCheat", game_->antiCheat->product);
         ij.Set("riskAccepted", game_->profile.allowProtected);
     }
+    ij.Set("hookBlocked", game_ && process::IsKnownUnsafeHookTarget(game_->exeName));
     switch (integ) {
     case Integration::None:
         ij.Set("title", "No game detected");
@@ -589,7 +592,9 @@ Json EngineApp::BuildStatusLocked() const
         break;
     case Integration::NotAvailable:
         ij.Set("title", "Limiting not available");
-        ij.Set("message", game_ && game_->attachAttempted
+        ij.Set("message", game_ && process::IsKnownUnsafeHookTarget(game_->exeName)
+                              ? "FrameFlow's DXGI hook is disabled for this game after repeated crashes. The NVIDIA driver limiter can be selected manually if available."
+                              : game_ && game_->attachAttempted
                               ? "Attaching automatically. If this persists, the game may reject hooks or use an unsupported presentation path."
                               : game_ && game_->profile.limitMethod == "frameflow"
                               ? "Waiting for the DX11/DX12 hook to attach."

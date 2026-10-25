@@ -36,7 +36,6 @@ public sealed partial class MainWindow : Window
     {
         InitializeComponent();
         ConfigureWindow();
-        LaunchGameButton.IsEnabled = File.Exists(_uiSettings.LastGamePath);
 
         VersionText.Text = AppInfo.IsPortable ? $"v{AppInfo.Version} (portable)" : $"v{AppInfo.Version}";
         Slider.ValueChanging += v => FpsValue.Text = FormatFps(v);
@@ -51,6 +50,7 @@ public sealed partial class MainWindow : Window
         AdvancedPage.Attach(_engine);
 
         ApplyDisconnectedState();
+        ShowIdleGame();
         _engine.Start();
 
         switch (App.Options.InitialView)
@@ -180,7 +180,7 @@ public sealed partial class MainWindow : Window
         MethodFrameFlow.IsChecked = s.LimitMethodPreference == "frameflow";
         MethodDriver.IsChecked = s.LimitMethodPreference == "driver";
         LimitMethodButton.IsEnabled = s.Game is not null && s.Integration.Status != "Protected";
-        MethodFrameFlow.IsEnabled = s.Game is not null && s.Integration.Status != "Protected";
+        MethodFrameFlow.IsEnabled = s.Game is not null && s.Integration.Status != "Protected" && !s.Integration.HookBlocked;
         MethodDriver.IsEnabled = s.Nvidia.Available && s.Game is not null && s.Integration.Status != "Protected";
         RefreshText.Text = s.RefreshHz > 0 ? $"{s.RefreshHz:0.##} Hz" : "—";
 
@@ -205,28 +205,7 @@ public sealed partial class MainWindow : Window
     {
         if (s.Game is not { } g)
         {
-            string path = _uiSettings.LastGamePath;
-            bool hasRecentGame = !string.IsNullOrWhiteSpace(path) && File.Exists(path);
-            GameName.Text = hasRecentGame ? Path.GetFileNameWithoutExtension(path) : "Looking for a game…";
-            GameExe.Text = hasRecentGame ? "Launch normally; FrameFlow attaches automatically" : "Choose a game to launch";
-            ChangeGameText.Text = hasRecentGame ? "Change Game" : "Choose Game";
-            LaunchGameButton.IsEnabled = hasRecentGame;
-            LaunchGameButton.Visibility = hasRecentGame ? Visibility.Visible : Visibility.Collapsed;
-            ProtectedRiskButton.Visibility = Visibility.Collapsed;
-            GameMetaDot.Visibility = Visibility.Collapsed;
-            GameStatus.Visibility = Visibility.Collapsed;
-            IntegrationNote.Visibility = Visibility.Collapsed;
-            if (hasRecentGame && !string.Equals(_iconForExe, path, StringComparison.OrdinalIgnoreCase))
-            {
-                _iconForExe = path;
-                _ = LoadIcon(path);
-            }
-            else if (!hasRecentGame)
-            {
-                GameIcon.Visibility = Visibility.Collapsed;
-                GameGlyph.Visibility = Visibility.Visible;
-                _iconForExe = null;
-            }
+            ShowIdleGame();
             return;
         }
 
@@ -270,6 +249,24 @@ public sealed partial class MainWindow : Window
             _iconForExe = g.ExePath;
             _ = LoadIcon(g.ExePath);
         }
+    }
+
+    private void ShowIdleGame()
+    {
+        string path = _uiSettings.LastGamePath;
+        bool hasRecentGame = !string.IsNullOrWhiteSpace(path) && File.Exists(path);
+        GameName.Text = "No game running";
+        GameExe.Text = hasRecentGame ? $"Last selected: {Path.GetFileNameWithoutExtension(path)}" : "Start a game; FrameFlow will detect it automatically";
+        ChangeGameText.Text = "Choose Game";
+        LaunchGameButton.IsEnabled = hasRecentGame;
+        LaunchGameButton.Visibility = hasRecentGame ? Visibility.Visible : Visibility.Collapsed;
+        ProtectedRiskButton.Visibility = Visibility.Collapsed;
+        GameMetaDot.Visibility = Visibility.Collapsed;
+        GameStatus.Visibility = Visibility.Collapsed;
+        IntegrationNote.Visibility = Visibility.Collapsed;
+        GameIcon.Visibility = Visibility.Collapsed;
+        GameGlyph.Visibility = Visibility.Visible;
+        _iconForExe = null;
     }
 
     private async Task LoadIcon(string exePath)
@@ -442,6 +439,17 @@ public sealed partial class MainWindow : Window
             clear.Click += (_, _) => _ = _engine.ClearManualGame(g.ProfileId);
             ChangeGameFlyout.Items.Add(clear);
         }
+        if (_status?.Game is null && !string.IsNullOrWhiteSpace(_uiSettings.LastGamePath))
+        {
+            var forget = new MenuFlyoutItem { Text = "Forget last selected game", Icon = new FontIcon { Glyph = "" } };
+            forget.Click += (_, _) =>
+            {
+                _uiSettings.LastGamePath = "";
+                _uiSettings.Save();
+                if (_status is { Game: null } status) ApplyGame(status);
+            };
+            ChangeGameFlyout.Items.Add(forget);
+        }
     }
 
     private async Task BrowseForGame()
@@ -492,6 +500,13 @@ public sealed partial class MainWindow : Window
                 IntegrationNote.Text = error.Trim();
                 IntegrationNote.Visibility = Visibility.Visible;
                 Log.Info($"Protected game started normally: {error.Trim()}");
+                LaunchGameButton.IsEnabled = true;
+            }
+            else if (launcher.ExitCode == 8)
+            {
+                IntegrationNote.Text = error.Trim();
+                IntegrationNote.Visibility = Visibility.Visible;
+                Log.Info($"Game started without DXGI hook: {error.Trim()}");
                 LaunchGameButton.IsEnabled = true;
             }
             else if (launcher.ExitCode != 0)
