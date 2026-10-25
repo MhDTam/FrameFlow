@@ -17,11 +17,15 @@ Game detection is read-only. Limiting starts only after the user chooses FrameFl
 enables Frame Pacing for that game run. The hook has not been validated against a broad game
 compatibility matrix. The original DXGI vtable hook crashed Euro Truck Simulator 2 version
 1.61.1.9 when Steam Overlay called it recursively. An alternate Present detour survived manual
-testing with Steam Overlay enabled. In one normal Steam launch, selecting FrameFlow and enabling
-Frame Pacing attached automatically; a 15-second sample at 70 FPS averaged 70.000 FPS with
-14.292 ms P99 frametime and no intervals over 1.5 times the target. This is a single-game,
-single-session result, not a broad compatibility guarantee. Start this title normally through
-Steam; direct early launch exits before the game initializes.
+testing with Steam Overlay enabled. In normal Steam launches, selecting FrameFlow and enabling
+Frame Pacing attached automatically. A 15-second pre-driving sample at 70 FPS averaged 70.000 FPS
+with 14.292 ms P99 frametime and no intervals over 1.5 times the target. During 30 seconds of
+driving, 17 intervals exceeded that threshold; all were dominated by time before the hook's
+Present call, while maximum hook overhead was 0.020 ms. The first attached game exited unexpectedly
+after about 94 seconds without a new Windows crash report; a second attached run stayed open for
+over two minutes during driving. The cause of the first exit is unresolved, and compatibility is
+still experimental. Start this title normally through Steam; direct early launch exits before the
+game initializes.
 
 ## What works today
 

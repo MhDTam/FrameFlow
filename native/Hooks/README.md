@@ -18,8 +18,10 @@ Hard rules:
 
 The default vtable hook repeatedly crashed Euro Truck Simulator 2. A captured stack showed
 Steam Overlay recursively calling that hook. The alternate Present detour remained connected
-with Steam Overlay enabled during manual and one user-triggered automatic attachment test at
-70 FPS. To collect diagnostics, enable
+with Steam Overlay enabled during manual and user-triggered automatic attachment tests at
+70 FPS. One attached run exited unexpectedly without a new Windows crash report; another
+remained open through more than two minutes of driving. The cause of the exit is unresolved.
+To collect diagnostics, enable
 Windows Error Reporting minidumps with `tools/ets2-crash-dump.ps1 -Action Enable`, launch the
 game normally through Steam, then run `tools/diagnose-ets2.ps1` while it is running.
 The diagnostic script explicitly opts into the known-unsafe late attach; it does not change the
