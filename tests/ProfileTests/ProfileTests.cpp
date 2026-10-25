@@ -67,6 +67,8 @@ TEST(Profile_FromJsonValidates)
     CHECK(p->fpsLimit == 60.0);
     CHECK(p->pacingMode == "Balanced");
     CHECK(p->limitMethod == "auto");
+    CHECK(!p->framePacing);
+    CHECK(!p->startWithGame);
     CHECK(!p->allowProtected); // old profiles never imply consent
     j.Set("limitMethod", "unknown");
     CHECK(profiles::GameProfile::FromJson(j)->limitMethod == "auto");

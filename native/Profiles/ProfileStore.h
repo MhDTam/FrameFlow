@@ -15,10 +15,10 @@ struct GameProfile {
     std::string exe;            // file name, e.g. "Cyberpunk2077.exe"
     std::string exePath;        // full path (may be empty if never accessible)
     double fpsLimit = 60.0;
-    bool framePacing = true;
+    bool framePacing = false;
     std::string pacingMode = "Balanced";
     std::string limitMethod = "auto"; // auto | frameflow | driver
-    bool startWithGame = true;
+    bool startWithGame = false;
     bool allowProtected = false; // explicit per-game risk acknowledgement
     bool manual = false;        // user picked this exe explicitly
     std::int64_t lastDetectedUnix = 0;

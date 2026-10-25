@@ -241,16 +241,13 @@ void EngineApp::SwitchToGame(const process::Candidate& c)
     g->exeName = c.signals.exeName;
     g->exePath = c.signals.exePath;
     g->exePathW = core::Utf8ToWide(g->exePath);
-    if (!retainedDriverPath_.empty() && retainedDriverPath_ != g->exePathW) {
-        nvapi_.ClearGameLimit(retainedDriverPath_);
-        retainedDriverPath_.clear();
-    }
     g->api = std::string(process::InferGraphicsApi(c.signals));
     g->reasons = c.score.reasons;
     g->accessible = c.signals.accessible;
     g->hwnd = c.hwnd;
     g->profile = profiles_.LoadOrCreate(g->exeName, g->exePath, settings_.defaultFps, settings_.defaultMode);
-    if (!g->profile.startWithGame) g->profile.framePacing = false;
+    // Detection and saved preferences never activate limiting for a new process.
+    g->profile.framePacing = false;
 
     g->antiCheat = process::DetectAntiCheat(g->exeName, c.moduleNames, scanner_.RunningProcessNames(),
                                             process::CollectNearbyFiles(core::Utf8ToWide(g->exePath)));
@@ -263,12 +260,12 @@ void EngineApp::SwitchToGame(const process::Candidate& c)
     game_ = std::move(g);
     TryAttachSession();
     ChooseLimitMethod();
-    if (!game_->session) TryAutoAttach();
 }
 
 void EngineApp::TryAutoAttach()
 {
     if (!game_ || game_->session || game_->attachAttempted || !game_->accessible ||
+        !game_->profile.framePacing || game_->profile.limitMethod != "frameflow" ||
         (game_->antiCheat && !game_->profile.allowProtected) ||
         (game_->api != "DX11" && game_->api != "DX12" && game_->api != "DXGI")) return;
     if (process::IsKnownUnsafeHookTarget(game_->exeName)) return;
@@ -287,9 +284,9 @@ void EngineApp::TryAutoAttach()
                          nullptr, launcher.parent_path().c_str(), &startup, &child)) {
         ::CloseHandle(child.hThread);
         ::CloseHandle(child.hProcess);
-        FF_LOG_INFO("Auto-attach requested for {} (pid {})", game_->exeName, game_->pid);
+        FF_LOG_INFO("User-requested attach for {} (pid {})", game_->exeName, game_->pid);
     } else {
-        FF_LOG_WARN("Auto-attach failed to start for {}: {}", game_->exeName, ::GetLastError());
+        FF_LOG_WARN("User-requested attach failed to start for {}: {}", game_->exeName, ::GetLastError());
     }
 }
 
@@ -305,14 +302,7 @@ void EngineApp::CloseCurrentGame(const char* reason)
         c.generation.fetch_add(1, std::memory_order_acq_rel);
     }
     if (game_->method == LimitMethod::NvidiaDriver) {
-        if (std::string_view(reason) == "process exited" && game_->profile.framePacing) {
-            // NVAPI DRS is commonly read at game startup. Keep this game's selected cap in place
-            // between runs so the next launch actually sees it. It is still restored on engine exit.
-            retainedDriverPath_ = game_->exePathW;
-        } else {
-            nvapi_.ClearGameLimit(game_->exePathW);
-            if (retainedDriverPath_ == game_->exePathW) retainedDriverPath_.clear();
-        }
+        nvapi_.ClearGameLimit(game_->exePathW);
     }
     if (presentMon_.Running()) presentMon_.SetTarget(0);
     miniOverlay_.Clear();
@@ -329,8 +319,7 @@ void EngineApp::TryAttachSession()
     game_->reader.SkipToEnd(game_->session->Block());
 }
 
-// Auto uses the in-process pacer only when a FrameFlow session exists. The NVIDIA driver
-// limiter is opt-in; games without a session remain unmodified. Also points ETW at the game.
+// Only an explicitly chosen method can limit a game. Detection alone is read-only.
 void EngineApp::ChooseLimitMethod()
 {
     if (!game_) return;
@@ -341,11 +330,10 @@ void EngineApp::ChooseLimitMethod()
     const auto& preference = game_->profile.limitMethod;
     if (preference == "frameflow") game_->method = canHook ? LimitMethod::FramePacer : LimitMethod::None;
     else if (preference == "driver") game_->method = canDriver ? LimitMethod::NvidiaDriver : LimitMethod::None;
-    else game_->method = canHook ? LimitMethod::FramePacer : LimitMethod::None;
+    else game_->method = LimitMethod::None;
 
     if (oldMethod == LimitMethod::NvidiaDriver && game_->method != oldMethod) {
         nvapi_.ClearGameLimit(game_->exePathW);
-        if (retainedDriverPath_ == game_->exePathW) retainedDriverPath_.clear();
     }
     if (oldMethod == LimitMethod::FramePacer && game_->method != oldMethod && game_->session) {
         auto& c = game_->session->Block().control;
@@ -378,7 +366,6 @@ void EngineApp::ApplyProfile()
             nvapi_.SetGameLimit(game_->exePathW, static_cast<std::uint32_t>(game_->profile.fpsLimit + 0.5));
         else {
             nvapi_.ClearGameLimit(game_->exePathW);
-            if (retainedDriverPath_ == game_->exePathW) retainedDriverPath_.clear();
         }
     }
 }
@@ -456,7 +443,7 @@ void EngineApp::TelemetryLoop()
                 const auto stats = telemetry::ComputeStats(ft);
                 const auto graph = telemetry::BuildGraph(ft, settings_.telemetrySeconds, kGraphBuckets);
 
-                if (settings_.miniOverlay && stats.currentFps > 0)
+                if (settings_.miniOverlay)
                     miniOverlay_.Update(static_cast<HWND>(game_->hwnd), game_->pid,
                                         stats.currentFps, stats.lastFrametimeMs, stats.low1Fps,
                                         game_->profile.fpsLimit > 0 ? 1000.0 / game_->profile.fpsLimit : 0,
@@ -482,7 +469,12 @@ void EngineApp::TelemetryLoop()
                 m.Set("graph", std::move(gj));
                 msg = std::move(m);
             } else {
-                miniOverlay_.Clear();
+                if (settings_.miniOverlay && game_)
+                    miniOverlay_.Update(static_cast<HWND>(game_->hwnd), game_->pid,
+                                        0, 0, 0, game_->profile.fpsLimit > 0 ? 1000.0 / game_->profile.fpsLimit : 0,
+                                        game_->frametimes);
+                else
+                    miniOverlay_.Clear();
                 const auto now = std::chrono::steady_clock::now();
                 if (now - lastEmpty > std::chrono::seconds(1)) {
                     lastEmpty = now;
@@ -593,14 +585,14 @@ Json EngineApp::BuildStatusLocked() const
     case Integration::NotAvailable:
         ij.Set("title", "Limiting not available");
         ij.Set("message", game_ && process::IsKnownUnsafeHookTarget(game_->exeName)
-                              ? "FrameFlow's DXGI hook is disabled for this game after repeated crashes. The NVIDIA driver limiter can be selected manually if available."
+                              ? "The DXGI hook crashed this game. Start it normally and select the NVIDIA limiter manually if available."
                               : game_ && game_->attachAttempted
-                              ? "Attaching automatically. If this persists, the game may reject hooks or use an unsupported presentation path."
+                              ? "Attaching on request. If this persists, the game may reject hooks or use an unsupported presentation path."
                               : game_ && game_->profile.limitMethod == "frameflow"
-                              ? "Waiting for the DX11/DX12 hook to attach."
+                              ? (game_->profile.framePacing ? "Waiting for the DX11/DX12 hook to attach." : "Select Frame Pacing to enable the DX11/DX12 hook for this run.")
                               : game_ && game_->profile.limitMethod == "driver"
                               ? "NVIDIA driver limiting is unavailable for this game."
-                              : "Waiting for the game graphics API; FrameFlow will attach automatically.");
+                              : "Game detected. Select a limiter and enable Frame Pacing to start.");
         break;
     case Integration::Protected:
         ij.Set("title", "Protected game detected");
@@ -694,9 +686,11 @@ void EngineApp::OnMessage(const Json& msg)
             std::scoped_lock lock(mutex_);
             if (game_) {
                 game_->profile.framePacing = enable;
-                if (enable) game_->profile.startWithGame = true;
+                // Activation is per run. Keep the FPS and method preference, not auto-start.
+                game_->profile.startWithGame = false;
                 SaveProfileLocked();
                 ApplyProfile();
+                if (enable) TryAutoAttach();
                 ok = true;
                 FF_LOG_INFO("Frame pacing {} for {}", enable ? "enabled" : "disabled", game_->exeName);
             }

@@ -107,7 +107,6 @@ private:
 
     mutable std::mutex mutex_;                 // guards everything below
     std::unique_ptr<CurrentGame> game_;
-    std::wstring retainedDriverPath_; // keep DRS cap across a game's exit/relaunch until a different game is selected
     std::vector<process::Candidate> lastCandidates_;
     display::MonitorInfo monitor_;
     std::string lastStatusDump_;

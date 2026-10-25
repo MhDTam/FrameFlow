@@ -13,8 +13,8 @@ using Windows.UI;
 namespace FrameFlow.UI.Controls;
 
 /// <summary>
-/// Minimal FPS slider with evenly spaced preset markers (30 … 240). Dragging snaps to markers;
-/// custom values typed elsewhere (e.g. 141 or 59.94) are placed proportionally between markers.
+/// FPS slider with reference markers (30 … 240). Pointer and keyboard can choose any integer
+/// within the visible range; the number editor accepts precise values outside that range.
 /// </summary>
 public sealed class FpsSlider : Grid
 {
@@ -34,7 +34,7 @@ public sealed class FpsSlider : Grid
     private double _value = 60;
     private bool _dragging;
 
-    /// <summary>Raised while the user drags (preview) — value is always a marker.</summary>
+    /// <summary>Raised while the user drags (preview).</summary>
     public event Action<double>? ValueChanging;
     /// <summary>Raised when the user commits a new value (pointer release or key press).</summary>
     public event Action<double>? ValueCommitted;
@@ -148,10 +148,13 @@ public sealed class FpsSlider : Grid
         return 1;
     }
 
-    private int NearestMarker(double x)
+    private double ValueAt(double x)
     {
         double p = Math.Clamp((x - Pad) / ContentWidth, 0, 1);
-        return (int)Math.Round(p * (_markers.Length - 1));
+        double segment = p * (_markers.Length - 1);
+        int index = Math.Min((int)segment, _markers.Length - 2);
+        double fraction = segment - index;
+        return Math.Round(_markers[index] + fraction * (_markers[index + 1] - _markers[index]));
     }
 
     private void Layout()
@@ -185,7 +188,7 @@ public sealed class FpsSlider : Grid
 
     private void SetFromPointer(double x, bool commit)
     {
-        double v = _markers[NearestMarker(x)];
+        double v = ValueAt(x);
         bool changed = Math.Abs(v - _value) > 1e-9;
         _value = v;
         Layout();
@@ -218,18 +221,16 @@ public sealed class FpsSlider : Grid
 
     private void OnKeyDown(object sender, KeyRoutedEventArgs e)
     {
-        int idx = Array.FindIndex(_markers, m => m >= _value - 0.01);
-        if (idx < 0) idx = _markers.Length - 1;
-        int target = e.Key switch
+        double target = e.Key switch
         {
-            VirtualKey.Left or VirtualKey.Down => Math.Max(0, (_markers[idx] > _value + 0.01 ? idx : idx) - 1),
-            VirtualKey.Right or VirtualKey.Up => Math.Min(_markers.Length - 1, _markers[idx] > _value + 0.01 ? idx : idx + 1),
-            VirtualKey.Home => 0,
-            VirtualKey.End => _markers.Length - 1,
+            VirtualKey.Left or VirtualKey.Down => Math.Max(_markers[0], Math.Ceiling(_value) - 1),
+            VirtualKey.Right or VirtualKey.Up => Math.Min(_markers[^1], Math.Floor(_value) + 1),
+            VirtualKey.Home => _markers[0],
+            VirtualKey.End => _markers[^1],
             _ => -1,
         };
         if (target < 0) return;
-        _value = _markers[target];
+        _value = target;
         Layout();
         ValueChanging?.Invoke(_value);
         ValueCommitted?.Invoke(_value);

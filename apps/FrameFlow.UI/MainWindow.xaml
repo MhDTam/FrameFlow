@@ -27,13 +27,7 @@
             <Border x:Name="DragRegion" Grid.Column="0" Grid.ColumnSpan="3" Background="Transparent" />
 
             <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Spacing="14" IsHitTestVisible="False">
-                <Viewbox Width="48" Height="50">
-                <Grid Width="74" Height="76">
-                    <Path Data="M7,36 C7,16 20,8 39,8 L73,8 C75,8 75,12 72,17 C68,25 62,27 53,27 L34,27 C21,27 13,30 7,36 Z" Fill="#70D0D2" />
-                    <Path Data="M7,52 C12,39 21,35 34,35 L62,35 C65,35 67,38 65,42 C62,50 57,54 48,54 L31,54 C21,54 14,56 7,62 Z" Fill="#A1E5EB" />
-                    <Path Data="M6,65 C8,54 17,50 29,50 L35,50 C36,62 28,70 17,74 C9,77 4,72 6,65 Z" Fill="#54B8C0" />
-                </Grid>
-                </Viewbox>
+                <Image Width="48" Height="48" Source="Assets/FrameFlow.png" Stretch="Uniform" />
                 <StackPanel VerticalAlignment="Center">
                     <TextBlock Text="FrameFlow" FontFamily="{StaticResource FfDisplayFont}" FontSize="25" FontWeight="SemiBold" Foreground="{StaticResource FfInkBrush}" />
                     <TextBlock Text="Smooth Frames. Better Games." FontFamily="{StaticResource FfFont}" FontSize="13" Foreground="{StaticResource FfInk2Brush}" Margin="0,-2,0,0" />
@@ -111,7 +105,7 @@
                                    Margin="0,4,0,0" TextTrimming="CharacterEllipsis" Visibility="Collapsed" />
                     </StackPanel>
                     <Button x:Name="LaunchGameButton" Grid.Column="2" Style="{StaticResource FfSoftButton}" VerticalAlignment="Center" Padding="15,9" FontSize="13.5" CornerRadius="10" Visibility="Collapsed"
-                            Click="OnLaunchGame" Content="Launch Last Game" AutomationProperties.Name="Launch last selected game with FrameFlow" />
+                            Click="OnLaunchGame" Content="Launch with FrameFlow" AutomationProperties.Name="Launch last selected game with FrameFlow hook" />
                     <Button x:Name="ProtectedRiskButton" Grid.Column="2" Style="{StaticResource FfSoftButton}" VerticalAlignment="Center" Padding="12,9" FontSize="12" CornerRadius="10" Visibility="Collapsed"
                             Click="OnProtectedRisk" Content="Play at your own risk" />
                     <Button x:Name="ChangeGameButton" Grid.Column="3" Style="{StaticResource FfSoftButton}" VerticalAlignment="Center" Padding="15,9" FontSize="13.5" CornerRadius="10"
@@ -307,19 +301,19 @@
             <Button x:Name="LimitMethodButton" Grid.Column="6" Style="{StaticResource FfGhostButton}" VerticalAlignment="Center" HorizontalAlignment="Left" AutomationProperties.Name="Limit method">
                 <StackPanel Orientation="Horizontal" Spacing="8">
                     <TextBlock Text="Limiter" Foreground="{StaticResource FfInk3Brush}" />
-                    <TextBlock x:Name="LimitMethodText" Text="Auto" FontWeight="Medium" />
+                    <TextBlock x:Name="LimitMethodText" Text="Off" FontWeight="Medium" />
                     <FontIcon Glyph="&#xE70D;" FontSize="10" Foreground="{StaticResource FfInk2Brush}" />
                 </StackPanel>
                 <Button.Flyout>
                     <MenuFlyout Placement="TopEdgeAlignedLeft">
-                        <RadioMenuFlyoutItem x:Name="MethodAuto" Text="Auto — FrameFlow only" GroupName="limitMethod" Click="OnLimitMethodClick" Tag="auto" IsChecked="True" />
-                        <RadioMenuFlyoutItem x:Name="MethodFrameFlow" Text="FrameFlow (automatic DX11/DX12 attach)" GroupName="limitMethod" Click="OnLimitMethodClick" Tag="frameflow" />
+                        <RadioMenuFlyoutItem x:Name="MethodAuto" Text="Off (detect only)" GroupName="limitMethod" Click="OnLimitMethodClick" Tag="auto" IsChecked="True" />
+                        <RadioMenuFlyoutItem x:Name="MethodFrameFlow" Text="FrameFlow (enable per run)" GroupName="limitMethod" Click="OnLimitMethodClick" Tag="frameflow" />
                         <RadioMenuFlyoutItem x:Name="MethodDriver" Text="NVIDIA driver" GroupName="limitMethod" Click="OnLimitMethodClick" Tag="driver" />
                     </MenuFlyout>
                 </Button.Flyout>
             </Button>
             <ToggleButton x:Name="MiniOverlayButton" Grid.Column="5" VerticalAlignment="Center" Click="OnMiniOverlayClick"
-                          Content="Mini OSD" ToolTipService.ToolTip="Show FrameFlow's FPS and frametime graph over the selected game. No other app required." />
+                          Content="Mini OSD" ToolTipService.ToolTip="Shows over windowed or borderless games. Live values require a FrameFlow hook or administrator access for ETW." />
             <StackPanel Grid.Column="5" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center" Visibility="Collapsed">
                 <TextBlock x:Name="VersionText" Text="v1.0.1" FontSize="11.5" Foreground="{StaticResource FfInk3Brush}" />
                 <Ellipse x:Name="EngineDot" Width="6" Height="6" Fill="{StaticResource FfGreenBrush}" VerticalAlignment="Center" />

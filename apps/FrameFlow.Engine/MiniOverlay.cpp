@@ -34,7 +34,7 @@ MiniOverlay::~MiniOverlay()
 void MiniOverlay::Update(HWND gameWindow, DWORD gamePid, double fps, double frametimeMs,
                          double low1Fps, double targetMs, const std::deque<double>& history)
 {
-    if (!std::isfinite(fps) || !std::isfinite(frametimeMs) || fps <= 0 || !gameWindow) {
+    if (!std::isfinite(fps) || !std::isfinite(frametimeMs) || !gameWindow) {
         Clear();
         return;
     }
@@ -195,10 +195,15 @@ void MiniOverlay::Draw(HDC screen)
     Text(buffer, 16, 9, RGB(116, 220, 222), L"FrameFlow Mini");
     ::SelectObject(buffer, bodyFont);
     wchar_t line[128]{};
-    swprintf_s(line, L"FPS  %.1f       1%% low  %.1f", frame.fps, frame.low1Fps);
-    Text(buffer, 16, 35, RGB(241, 249, 251), line);
-    swprintf_s(line, L"Frametime  %.2f ms", frame.frametimeMs);
-    Text(buffer, 16, 57, RGB(177, 203, 212), line);
+    if (frame.fps > 0) {
+        swprintf_s(line, L"FPS  %.1f       1%% low  %.1f", frame.fps, frame.low1Fps);
+        Text(buffer, 16, 35, RGB(241, 249, 251), line);
+        swprintf_s(line, L"Frametime  %.2f ms", frame.frametimeMs);
+        Text(buffer, 16, 57, RGB(177, 203, 212), line);
+    } else {
+        Text(buffer, 16, 35, RGB(241, 249, 251), L"Waiting for frame data");
+        Text(buffer, 16, 57, RGB(177, 203, 212), L"Enable hook or run as admin for ETW");
+    }
 
     HPEN axis = ::CreatePen(PS_SOLID, 1, RGB(58, 82, 95));
     HPEN previousPen = static_cast<HPEN>(::SelectObject(buffer, axis));

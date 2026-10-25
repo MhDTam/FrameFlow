@@ -93,12 +93,12 @@ std::optional<GameProfile> GameProfile::FromJson(const core::Json& j)
     p.game = j["game"].AsString(p.exe);
     const double fps = j["fpsLimit"].AsNumber(60.0);
     p.fpsLimit = (std::isfinite(fps) && fps >= 10.0 && fps <= 1000.0) ? fps : 60.0;
-    p.framePacing = j["framePacing"].AsBool(true);
+    p.framePacing = j["framePacing"].AsBool(false);
     const std::string mode = j["pacingMode"].AsString("Balanced");
     p.pacingMode = (mode == "Efficiency" || mode == "Precision") ? mode : "Balanced";
     const std::string method = j["limitMethod"].AsString("auto");
     p.limitMethod = (method == "frameflow" || method == "driver") ? method : "auto";
-    p.startWithGame = j["startWithGame"].AsBool(true);
+    p.startWithGame = j["startWithGame"].AsBool(false);
     p.allowProtected = j["allowProtected"].AsBool(false);
     p.manual = j["manual"].AsBool(false);
     p.lastDetectedUnix = j["lastDetected"].AsInt(0);

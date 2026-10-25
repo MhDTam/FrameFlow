@@ -13,11 +13,11 @@ drift-free timeline so frames arrive evenly spaced. It detects the running game,
 profile per game, and shows live frametime statistics. Protected games are skipped by default.
 
 This repository includes the validated pacing engine and an **experimental DX11/DX12 hook**.
-The hook can attach automatically to a selected game started normally, or load at startup through
-`FrameFlow.Launch.exe`. It has not yet been validated against a broad game compatibility matrix.
-Automatic hooking is disabled for Euro Truck Simulator 2 after repeated crashes observed with
-version 1.61.1.9. FrameFlow detects the game without modifying its process; an NVIDIA driver limit
-can be selected manually if available.
+Game detection is read-only. Limiting starts only after the user chooses FrameFlow or NVIDIA and
+enables Frame Pacing for that game run. The hook has not been validated against a broad game
+compatibility matrix. Late attachment to Euro Truck Simulator 2 version 1.61.1.9 caused repeated
+crashes; that path remains blocked. Direct early launch of this Steam title also exits before it
+initializes. For now, start ETS2 through Steam and select the NVIDIA driver limit manually if available.
 
 ## What works today
 
@@ -57,7 +57,7 @@ benchmark.bat        timing benchmark, writes docs\benchmark-report.md
 package-portable.bat builds the standalone ZIP distribution in dist\
 tools\package-installer.ps1 builds a compressed Windows Setup EXE from the standalone package
 run.bat              starts FrameFlow (the UI starts the engine)
-run-testrenderer.bat starts the DX11 test renderer; FrameFlow detects and paces it
+run-testrenderer.bat starts the DX11 test renderer; choose a limiter and enable pacing in the UI
 bin\FrameFlow.Launch.exe "C:\path\to\game.exe" [arguments]  optional early-hook launch for x64 DX11/DX12 games
 ```
 
@@ -135,9 +135,10 @@ protection. If the engine stops, a paced process falls back to "pacing off" with
 
 ## Experimental DX11 and DX12 game pacing
 
-Start FrameFlow, choose a game's `.exe` with **Change Game**, then start the game normally from
-Steam, its shortcut, or its own launcher. The engine detects the process and asks
-`FrameFlow.Launch.exe` to attach the hook. **Launch Game** remains an optional early-hook path:
+Start a game normally; FrameFlow detects it without injecting into the process. Choose **FrameFlow**
+under **Limiter**, then enable **Frame Pacing** to request the DX11/DX12 hook for this run.
+For games that cannot tolerate late attachment, choose the game executable, close the game, and use
+**Launch with FrameFlow** for an explicit early-hook attempt:
 it briefly uses Windows debugging events to pause at the executable entry point, loads the hook,
 and detaches before the game begins. By default, both paths skip protected games. The hook
 intercepts standard `D3D11CreateDevice`, `D3D11CreateDeviceAndSwapChain`, and DXGI factory imports,
@@ -146,10 +147,11 @@ the first visible swap chain immediately before `Present` / `Present1`. The UI c
 through the same shared-memory session as the test renderer. If the engine exits, pacing stops within
 two seconds. The hook remains loaded until the game exits; it is not detached at runtime.
 
-This path is **not yet a universal game limiter**. Automatic attachment can arrive after a game
+This path is **not yet a universal game limiter**. Attachment can arrive after a game
 has created a private or unsupported swap chain; some games reject external hooks or use
-unsupported presentation paths. In those cases Auto reports that FrameFlow cannot limit the game;
-NVIDIA is available only when explicitly selected.
+unsupported presentation paths. In those cases the UI reports that FrameFlow cannot limit the game;
+NVIDIA is available only when explicitly selected. The Mini OSD appears over windowed or borderless
+game windows; it shows a waiting message until a hook or an elevated ETW session supplies frame data.
 Check that the UI reports the FrameFlow pacing method before treating the FPS limit as precise.
 
 For each detected game, choose **Limiter** in the bottom bar: **Auto** uses the in-process

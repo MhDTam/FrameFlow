@@ -175,7 +175,7 @@ public sealed partial class MainWindow : Window
         ModeEfficiency.IsChecked = s.PacingMode == "Efficiency";
         ModeBalanced.IsChecked = s.PacingMode == "Balanced";
         ModePrecision.IsChecked = s.PacingMode == "Precision";
-        LimitMethodText.Text = s.LimitMethodPreference switch { "frameflow" => "FrameFlow", "driver" => "NVIDIA", _ => "Auto" };
+        LimitMethodText.Text = s.LimitMethodPreference switch { "frameflow" => "FrameFlow", "driver" => "NVIDIA", _ => "Off" };
         MethodAuto.IsChecked = s.LimitMethodPreference == "auto";
         MethodFrameFlow.IsChecked = s.LimitMethodPreference == "frameflow";
         MethodDriver.IsChecked = s.LimitMethodPreference == "driver";
@@ -187,7 +187,9 @@ public sealed partial class MainWindow : Window
         ApplySuggestions(s, fps);
         ApplyGame(s);
 
-        bool canToggle = s.Game is not null && s.Integration.CanPace;
+        bool canToggle = s.Game is not null && s.LimitMethodPreference != "auto" &&
+                         !(s.Integration.HookBlocked && s.LimitMethodPreference == "frameflow") &&
+                         s.Integration.Status is not ("Protected" or "AccessDenied");
         PacingSwitch.IsEnabled = canToggle;
         PacingSwitch.IsChecked = canToggle && s.PacingEnabled;
         (PacingStatus.Text, PacingStatus.Foreground) = s.Integration.Status switch
@@ -195,10 +197,12 @@ public sealed partial class MainWindow : Window
             "Active" => ("Active", Res<Brush>("FfGreenTextBrush")),
             "Standby" => ("Disabled", Res<Brush>("FfInk3Brush")),
             "Protected" => ("Unavailable", Res<Brush>("FfAmberTextBrush")),
+            "NotAvailable" when s.Integration.HookBlocked && s.LimitMethodPreference == "frameflow" => ("Unavailable", Res<Brush>("FfInk3Brush")),
+            "NotAvailable" when canToggle => (s.PacingEnabled ? "Connecting" : "Off", Res<Brush>("FfInk3Brush")),
             "NotAvailable" or "AccessDenied" => ("Unavailable", Res<Brush>("FfInk3Brush")),
             _ => ("Waiting for game", Res<Brush>("FfInk3Brush")),
         };
-        ToolTipService.SetToolTip(PacingSwitch, s.Integration.CanPace ? null : s.Integration.Message);
+        ToolTipService.SetToolTip(PacingSwitch, canToggle ? null : s.Integration.Message);
     }
 
     private void ApplyGame(EngineStatus s)
