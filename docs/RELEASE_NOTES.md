@@ -1,34 +1,29 @@
-FrameFlow 1.0.1 is a Windows x64 compatibility update. DX11/DX12 game hooking remains experimental.
+FrameFlow 1.0.2 is a Windows x64 update focused on user control and clear game compatibility.
 
-This update displays an idle game as **No game running**, lets you forget the last selected game,
-and uses the supplied FrameFlow F logo for the app and installer icon. Automatic DXGI attachment
-is disabled for Euro Truck Simulator 2 after repeated access violations observed immediately after
-attachment with game version 1.61.1.9. The game can start normally; FrameFlow's in-process frame
-pacing is unavailable for it in this release. An NVIDIA driver limit remains an explicit choice
-when supported by the system.
+Game detection no longer enables a frame limit or injects the DXGI hook. Choose **FrameFlow** or
+**NVIDIA** under **Limiter**, then turn on **Frame Pacing** for each game run. Neither method starts
+automatically on the next run. The FPS slider now accepts every integer from 30 to 240 instead of
+snapping to its reference labels; click the large FPS number for precise limits from 10 to 1000.
 
-Close FrameFlow and Euro Truck Simulator 2 before installing this update, then start the game
-normally. The old 1.0.0 process must no longer be running, because it still attempts automatic
-DXGI attachment.
+**Mini OSD** now appears over windowed and borderless games when switched on, even while waiting
+for frame data. Live FPS and the graph require a compatible FrameFlow hook or administrator access
+for ETW present tracing. Exclusive fullscreen can prevent a separate overlay window from appearing.
+The app and installer use the supplied glossy aqua F logo.
 
-Choose `FrameFlow-v1.0.1-Lite.zip` if the x64 .NET 8 Runtime is installed. It includes Windows
-App SDK Runtime 1.7. Choose `FrameFlow-v1.0.1-Portable.zip` for a standalone package with .NET 8
-included as well.
+The experimental DXGI hook remains disabled for Euro Truck Simulator 2 version 1.61.1.9. Late
+attachment repeatedly crashed the game. Direct executable launch exits before startup on this
+Steam installation, with or without the hook. Start the game through Steam and select the NVIDIA
+limiter manually if available. This is a compatibility fallback, not FrameFlow's in-process pacer.
 
-`FrameFlow-v1.0.1-Setup.exe` is a standalone, per-user Windows installer with Start Menu shortcut
-and uninstaller. It includes both runtimes and is smaller than the standalone ZIP because it uses
-solid LZMA2 compression. The installer is not code-signed.
+Choose `FrameFlow-v1.0.2-Lite.zip` if the x64 .NET 8 Runtime is installed. It includes Windows
+App SDK Runtime 1.7. Choose `FrameFlow-v1.0.2-Portable.zip` for a standalone package with .NET 8
+included as well. `FrameFlow-v1.0.2-Setup.exe` is a compressed per-user installer with shortcuts
+and an uninstaller. The installer is not code-signed.
 
-Extract the ZIP, then open `FrameFlow.exe`. The app detects games, offers a custom FPS limit,
-and shows live frametime statistics when a compatible DX11/DX12 session is active. NVIDIA driver
-limiting is available only when selected explicitly. Games with detected anti-cheat are skipped
-by default; game compatibility varies.
-
-The SHA-256 file next to each download can be used to verify it.
-
-FrameFlow's original code and assets are MIT-licensed. Third-party components retain their own
-licenses; see `LICENSE` and `THIRD_PARTY_NOTICES.md` inside the installed folder or ZIP.
+Close old FrameFlow processes before updating. Extract a ZIP before opening `FrameFlow.exe`.
+The SHA-256 file next to each download can be used to verify it. FrameFlow's original code and
+assets are MIT-licensed; third-party components retain their own licenses.
 
 ## Interface
 
-![FrameFlow 1.0.1 main window](https://raw.githubusercontent.com/MhDTam/FrameFlow/main/docs/frameflow-main.png)
+![FrameFlow 1.0.2 main window](https://raw.githubusercontent.com/MhDTam/FrameFlow/main/docs/frameflow-main.png)

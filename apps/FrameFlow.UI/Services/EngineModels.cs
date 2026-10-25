@@ -65,7 +65,7 @@ public sealed record EngineStatus(
                                               s.Str("profilesDir"), s.Str("logsDir"));
 
         return new EngineStatus(
-            e.Str("version", "1.0.1"),
+            e.Str("version", "1.0.2"),
             e.Num("fpsLimit", 60),
             e.Str("pacingMode", "Balanced"),
             e.Bool("pacingEnabled"),

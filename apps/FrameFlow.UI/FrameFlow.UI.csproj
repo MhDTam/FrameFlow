@@ -26,7 +26,7 @@
     <!-- Required for PRI generation under the dotnet CLI (no MSIX package is produced). -->
     <EnableMsixTooling>true</EnableMsixTooling>
 
-    <Version>1.0.1</Version>
+    <Version>1.0.2</Version>
     <Product>FrameFlow</Product>
     <Company>MhDTam</Company>
     <Copyright>Copyright (c) 2026 MhDTam</Copyright>

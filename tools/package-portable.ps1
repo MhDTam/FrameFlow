@@ -1,6 +1,6 @@
 # Build and stage a self-contained Windows portable release.
 param(
-    [string]$Version = '1.0.1',
+    [string]$Version = '1.0.2',
     [switch]$SkipBuild,
     [switch]$Lite
 )
