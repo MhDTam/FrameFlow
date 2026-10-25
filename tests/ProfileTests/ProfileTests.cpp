@@ -72,6 +72,8 @@ TEST(Profile_FromJsonValidates)
     CHECK(!p->allowProtected); // old profiles never imply consent
     j.Set("limitMethod", "unknown");
     CHECK(profiles::GameProfile::FromJson(j)->limitMethod == "auto");
+    j.Set("limitMethod", "driver"); // migrate profiles from builds with the removed NVIDIA method
+    CHECK(profiles::GameProfile::FromJson(j)->limitMethod == "auto");
     CHECK(!profiles::GameProfile::FromJson(core::Json::MakeObject()).has_value());
 }
 
@@ -90,14 +92,14 @@ TEST(ProfileStore_SaveLoadAndLoadOrCreate)
         CHECK(p.game == "Cyberpunk2077"); // file does not exist -> falls back to exe stem
         p.fpsLimit = 141.0;
         p.pacingMode = "Precision";
-        p.limitMethod = "driver";
+        p.limitMethod = "frameflow";
         p.allowProtected = true;
         CHECK(store.Save(p));
 
         const auto again = store.LoadOrCreate("Cyberpunk2077.exe", "D:\\Games\\Cyberpunk2077.exe", 60.0, "Balanced");
         CHECK(again.fpsLimit == 141.0);
         CHECK(again.pacingMode == "Precision");
-        CHECK(again.limitMethod == "driver");
+        CHECK(again.limitMethod == "frameflow");
         CHECK(again.allowProtected);
         CHECK(store.LoadAll().size() == 1);
     }

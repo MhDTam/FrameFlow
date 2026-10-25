@@ -17,7 +17,7 @@ struct GameProfile {
     double fpsLimit = 60.0;
     bool framePacing = false;
     std::string pacingMode = "Balanced";
-    std::string limitMethod = "auto"; // auto | frameflow | driver
+    std::string limitMethod = "auto"; // auto (off) | frameflow
     bool startWithGame = false;
     bool allowProtected = false; // explicit per-game risk acknowledgement
     bool manual = false;        // user picked this exe explicitly

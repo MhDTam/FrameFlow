@@ -45,19 +45,7 @@ ff_library(ff_graphics
     SOURCES Graphics/PresentPacer.cpp Graphics/BackendRegistry.cpp
     DEPS ff_core ff_timing ff_ipc)
 
-ff_library(ff_nvidia
-    SOURCES Graphics/Nvidia/NvapiLimiter.cpp
-    DEPS ff_core)
-
 ff_library(ff_etw
     SOURCES Etw/PresentMonitor.cpp
     DEPS ff_core
     SYSLIBS advapi32)
-
-# NVAPI is MIT-licensed and vendored in third_party/nvapi. It links only under MSVC (the SDK ships a
-# COFF import lib); other toolchains compile a stub that reports the driver limiter as unavailable.
-if(MSVC)
-    target_include_directories(ff_nvidia PRIVATE ${CMAKE_SOURCE_DIR}/third_party/nvapi)
-    target_compile_definitions(ff_nvidia PRIVATE FF_HAVE_NVAPI)
-    target_link_libraries(ff_nvidia PUBLIC ${CMAKE_SOURCE_DIR}/third_party/nvapi/amd64/nvapi64.lib)
-endif()

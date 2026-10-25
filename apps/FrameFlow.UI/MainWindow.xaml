@@ -210,7 +210,7 @@
                                           StrokeStartLineCap="Round" StrokeEndLineCap="Round" Width="19" Height="19" />
                                 </Border>
                                 <StackPanel VerticalAlignment="Center">
-                                    <TextBlock Text="FPS (avg)" FontSize="12" Foreground="{StaticResource FfInk2Brush}" />
+                                    <TextBlock Text="FPS (median)" FontSize="12" Foreground="{StaticResource FfInk2Brush}" ToolTipService.ToolTip="Typical FPS from the median frametime. Isolated spikes do not move this value; 1% Low and the graph still show them." />
                                     <TextBlock x:Name="MetricFps" Text="—" FontSize="17" FontWeight="SemiBold" Foreground="{StaticResource FfInkBrush}" Margin="0,2,0,0" />
                                 </StackPanel>
                             </StackPanel>
@@ -281,9 +281,9 @@
                 </StackPanel>
                 <Button.Flyout>
                     <MenuFlyout Placement="TopEdgeAlignedLeft">
-                        <RadioMenuFlyoutItem x:Name="ModeEfficiency" Text="Efficiency — lowest CPU use" GroupName="mode" Click="OnModeClick" Tag="Efficiency" />
+                        <RadioMenuFlyoutItem x:Name="ModeEfficiency" Text="Efficiency — less CPU, looser timing" GroupName="mode" Click="OnModeClick" Tag="Efficiency" />
                         <RadioMenuFlyoutItem x:Name="ModeBalanced" Text="Balanced — recommended" GroupName="mode" Click="OnModeClick" Tag="Balanced" IsChecked="True" />
-                        <RadioMenuFlyoutItem x:Name="ModePrecision" Text="Precision — tightest timing" GroupName="mode" Click="OnModeClick" Tag="Precision" />
+                        <RadioMenuFlyoutItem x:Name="ModePrecision" Text="Precision — tighter timing, more CPU" GroupName="mode" Click="OnModeClick" Tag="Precision" />
                     </MenuFlyout>
                 </Button.Flyout>
             </Button>
@@ -308,7 +308,6 @@
                     <MenuFlyout Placement="TopEdgeAlignedLeft">
                         <RadioMenuFlyoutItem x:Name="MethodAuto" Text="Off (detect only)" GroupName="limitMethod" Click="OnLimitMethodClick" Tag="auto" IsChecked="True" />
                         <RadioMenuFlyoutItem x:Name="MethodFrameFlow" Text="FrameFlow (enable per run)" GroupName="limitMethod" Click="OnLimitMethodClick" Tag="frameflow" />
-                        <RadioMenuFlyoutItem x:Name="MethodDriver" Text="NVIDIA driver" GroupName="limitMethod" Click="OnLimitMethodClick" Tag="driver" />
                     </MenuFlyout>
                 </Button.Flyout>
             </Button>

@@ -4,7 +4,6 @@
 #include "Core/Json.h"
 #include "Display/DisplayInfo.h"
 #include "Etw/PresentMonitor.h"
-#include "Graphics/Nvidia/NvapiLimiter.h"
 #include "IPC/PipeServer.h"
 #include "IPC/SharedSession.h"
 #include "ProcessDetection/AntiCheatDetector.h"
@@ -27,9 +26,9 @@ namespace ff::engine {
 // How FrameFlow is limiting the current game.
 enum class Integration {
     None,          // no game
-    Active,        // limiting now (in-process pacer or driver limiter — see LimitMethod)
+    Active,        // limiting now through the in-process pacer
     Standby,       // connected/able to limit, but the user switched pacing off
-    NotAvailable,  // nothing here can limit this game (no FrameFlow session, no NVIDIA driver)
+    NotAvailable,  // no FrameFlow session can limit this game
     Protected,     // anti-cheat detected: integration disabled on purpose
     AccessDenied,  // game is elevated, FrameFlow is not
 };
@@ -38,7 +37,6 @@ enum class Integration {
 enum class LimitMethod {
     None,
     FramePacer,    // in-process deadline pacer (FrameFlow-aware renderer / future hook)
-    NvidiaDriver,  // NVIDIA driver "Max Frame Rate" via NVAPI (no injection)
 };
 
 struct CurrentGame {
@@ -53,7 +51,7 @@ struct CurrentGame {
     void* hwnd = nullptr;
 
     LimitMethod method = LimitMethod::None;
-    std::wstring exePathW;          // for NVAPI (needs the wide path)
+    std::wstring exePathW;          // used for launch and nearby-file detection
 
     std::unique_ptr<ipc::SharedSession> session;
     ipc::RingReader reader;
@@ -82,7 +80,7 @@ private:
     void CloseCurrentGame(const char* reason);
     void TryAttachSession();
     void TryAutoAttach();
-    void ChooseLimitMethod();       // decides FramePacer vs NvidiaDriver for the current game
+    void ChooseLimitMethod();       // connects the selected FrameFlow pacer when available
     void ApplyProfile();            // pushes the profile to whichever method is active
 
     // IPC
@@ -100,7 +98,6 @@ private:
     profiles::ProfileStore profiles_;
     ipc::PipeServer pipe_;
     process::ProcessScanner scanner_;
-    nvidia::NvapiLimiter nvapi_;
     etw::PresentMonitor presentMon_;
     MiniOverlay miniOverlay_;
     etw::StartResult measurement_ = etw::StartResult::Failed; // ETW session state

@@ -29,30 +29,24 @@ public sealed partial class AdvancedView : UserControl
             ApiValue.Text = s.Game?.Api ?? "—";
             MethodValue.Text = s.LimitMethod switch
             {
-                "driver" => "NVIDIA driver limiter (no injection)",
                 "frameflow" => "FrameFlow in-process pacer",
                 _ => "None",
             };
             IntegrationValue.Text = string.IsNullOrEmpty(s.Integration.Message)
                 ? s.Integration.Title
                 : $"{s.Integration.Title}. {s.Integration.Message}";
-            NvidiaValue.Text = s.Nvidia.Available
-                ? $"{s.Nvidia.Gpu}" + (string.IsNullOrEmpty(s.Nvidia.DriverVersion) ? "" : $" (driver {s.Nvidia.DriverVersion})")
-                : "Not present";
             MeasurementValue.Text = s.Measurement switch
             {
                 "live" => "Live (ETW present monitor)",
                 "needsAdmin" => "Run FrameFlow as administrator to measure real games",
                 _ => "Off",
             };
-            PrecisionValue.Text = s.LimitMethod == "driver"
-                ? "Set by the NVIDIA driver"
-                : s.PacingMode switch
-                {
-                    "Efficiency" => "Efficiency: wide timer sleep, short spin",
-                    "Precision" => "Precision: longer final spin, tightest release",
-                    _ => "Balanced: timer sleep, then yield and a short spin",
-                };
+            PrecisionValue.Text = s.PacingMode switch
+            {
+                "Efficiency" => "Efficiency: wide timer sleep, short spin",
+                "Precision" => "Precision: longer final spin, tightest release",
+                _ => "Balanced: timer sleep, then yield and a short spin",
+            };
             ReasonsValue.Text = s.Game is { Reasons.Count: > 0 } gg ? string.Join(" · ", gg.Reasons) : "—";
             DisplayValue.Text = s.DisplayWidth > 0 ? $"{s.DisplayWidth}×{s.DisplayHeight} @ {s.RefreshHz:0.###} Hz" : "—";
         }
@@ -60,7 +54,7 @@ public sealed partial class AdvancedView : UserControl
         if (t is { Live: true, CurrentFps: > 0 })
         {
             var ci = CultureInfo.InvariantCulture;
-            AvgFps.Text = t.AverageFps.ToString("0.00", ci);
+            AvgFps.Text = t.MedianFps.ToString("0.00", ci);
             Lows.Text = $"{t.Low1Fps.ToString("0.0", ci)} / {t.Low01Fps.ToString("0.0", ci)} FPS";
             AvgFt.Text = $"{t.AvgFrametimeMs.ToString("0.000", ci)} ms";
             MinMax.Text = $"{t.MinFrametimeMs.ToString("0.000", ci)} / {t.MaxFrametimeMs.ToString("0.000", ci)} ms";

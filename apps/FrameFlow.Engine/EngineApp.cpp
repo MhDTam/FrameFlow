@@ -68,6 +68,7 @@ Json StatsToJson(const telemetry::FrameStats& s)
     j.Set("windowSeconds", s.windowSeconds);
     j.Set("currentFps", s.currentFps);
     j.Set("averageFps", s.averageFps);
+    j.Set("medianFps", s.medianFps);
     j.Set("frametimeMs", s.currentFps > 0 ? 1000.0 / s.currentFps : 0.0);
     j.Set("lastFrametimeMs", s.lastFrametimeMs);
     j.Set("avgFrametimeMs", s.avgFrametimeMs);
@@ -99,10 +100,7 @@ int EngineApp::Run()
 {
     FF_LOG_INFO("FrameFlow.Engine {} starting (QPC {} Hz, display {}x{} @ {} Hz)", FF_VERSION_STRING,
                 timing::Clock::Frequency(), monitor_.width, monitor_.height, monitor_.refreshHz);
-    if (nvapi_.Available())
-        FF_LOG_INFO("NVIDIA driver limiter available: {}", nvapi_.Info().gpuName);
-    // Real-game frametime measurement via ETW. Needs admin; if unavailable, the driver limiter still
-    // works and the UI explains that measurement needs elevation.
+    // Real-game frametime measurement via ETW requires administrator rights.
     measurement_ = presentMon_.Start();
     pipe_.Start();
     detection_ = std::thread([this] { DetectionLoop(); });
@@ -301,9 +299,6 @@ void EngineApp::CloseCurrentGame(const char* reason)
         c.pacingEnabled.store(0, std::memory_order_release);
         c.generation.fetch_add(1, std::memory_order_acq_rel);
     }
-    if (game_->method == LimitMethod::NvidiaDriver) {
-        nvapi_.ClearGameLimit(game_->exePathW);
-    }
     if (presentMon_.Running()) presentMon_.SetTarget(0);
     miniOverlay_.Clear();
     game_.reset();
@@ -332,15 +327,10 @@ void EngineApp::ChooseLimitMethod()
     const auto oldMethod = game_->method;
     const bool allowed = !game_->antiCheat || game_->profile.allowProtected;
     const bool canHook = game_->session && allowed;
-    const bool canDriver = allowed && game_->accessible && nvapi_.Available();
     const auto& preference = game_->profile.limitMethod;
     if (preference == "frameflow") game_->method = canHook ? LimitMethod::FramePacer : LimitMethod::None;
-    else if (preference == "driver") game_->method = canDriver ? LimitMethod::NvidiaDriver : LimitMethod::None;
     else game_->method = LimitMethod::None;
 
-    if (oldMethod == LimitMethod::NvidiaDriver && game_->method != oldMethod) {
-        nvapi_.ClearGameLimit(game_->exePathW);
-    }
     if (oldMethod == LimitMethod::FramePacer && game_->method != oldMethod && game_->session) {
         auto& c = game_->session->Block().control;
         c.pacingEnabled.store(0, std::memory_order_relaxed);
@@ -367,12 +357,6 @@ void EngineApp::ApplyProfile()
         c.engineHeartbeatQpc.store(timing::Clock::Now(), std::memory_order_relaxed);
         c.engineAttached.store(1, std::memory_order_release);
         c.generation.fetch_add(1, std::memory_order_acq_rel);
-    } else if (game_->method == LimitMethod::NvidiaDriver) {
-        if (game_->profile.framePacing)
-            nvapi_.SetGameLimit(game_->exePathW, static_cast<std::uint32_t>(game_->profile.fpsLimit + 0.5));
-        else {
-            nvapi_.ClearGameLimit(game_->exePathW);
-        }
     }
 }
 
@@ -428,8 +412,8 @@ void EngineApp::TelemetryLoop()
                 // Measure real presents even when hooking is unavailable; useful for the mini OSD.
                 scratch.clear();
                 presentMon_.Drain(game_->pid, scratch);
-                pacingActive = game_->method == LimitMethod::NvidiaDriver && game_->profile.framePacing;
-                appliedFps = game_->profile.fpsLimit;
+                pacingActive = false;
+                appliedFps = 0.0;
                 haveFrames = true;
             }
 
@@ -460,7 +444,7 @@ void EngineApp::TelemetryLoop()
                 Json m = proto::Make(proto::type::TelemetryUpdate);
                 m.Set("source", ft.empty() ? "waiting" : "live");
                 m.Set("pid", game_->pid);
-                m.Set("method", game_->method == LimitMethod::NvidiaDriver ? "driver" : "frameflow");
+                m.Set("method", "frameflow");
                 m.Set("pacingActive", pacingActive);
                 m.Set("appliedFps", appliedFps);
                 m.Set("stats", StatsToJson(stats));
@@ -504,7 +488,7 @@ Integration EngineApp::IntegrationLocked() const
 {
     if (!game_) return Integration::None;
     if (game_->antiCheat && !game_->profile.allowProtected) return Integration::Protected;
-    if (game_->method == LimitMethod::FramePacer || game_->method == LimitMethod::NvidiaDriver)
+    if (game_->method == LimitMethod::FramePacer)
         return game_->profile.framePacing ? Integration::Active : Integration::Standby;
     if (!game_->accessible) return Integration::AccessDenied;
     return Integration::NotAvailable;
@@ -551,21 +535,13 @@ Json EngineApp::BuildStatusLocked() const
 
     // How limiting is done and whether real-game metrics are available.
     const LimitMethod method = game_ ? game_->method : LimitMethod::None;
-    const char* methodStr = method == LimitMethod::NvidiaDriver ? "driver"
-                            : method == LimitMethod::FramePacer ? "frameflow"
-                                                                : "none";
+    const char* methodStr = method == LimitMethod::FramePacer ? "frameflow" : "none";
     s.Set("limitMethod", methodStr);
     s.Set("limitMethodPreference", game_ ? game_->profile.limitMethod : "auto");
-    auto nv = Json::MakeObject();
-    nv.Set("available", nvapi_.Available());
-    nv.Set("gpu", nvapi_.Info().gpuName);
-    nv.Set("driverVersion", nvapi_.Info().driverVersion);
-    s.Set("nvidia", std::move(nv));
     const char* measurement = presentMon_.Running() ? "live"
                               : (measurement_ == etw::StartResult::NeedElevation ? "needsAdmin" : "off");
     s.Set("measurement", measurement);
 
-    const bool driver = method == LimitMethod::NvidiaDriver;
     const Integration integ = IntegrationLocked();
     auto ij = Json::MakeObject();
     ij.Set("status", ToString(integ));
@@ -580,13 +556,12 @@ Json EngineApp::BuildStatusLocked() const
         ij.Set("message", "Start a game, or choose one manually.");
         break;
     case Integration::Active:
-        ij.Set("title", driver ? "Driver frame limit active" : "Frame pacing active");
-        ij.Set("message", driver ? "Limited through the NVIDIA driver. Restart the game if it was already running when the limit changed."
-                                 : "");
+        ij.Set("title", "Frame pacing active");
+        ij.Set("message", "");
         break;
     case Integration::Standby:
-        ij.Set("title", driver ? "Driver frame limit off" : "Frame pacing off");
-        ij.Set("message", driver ? "FrameFlow is not limiting this game." : "FrameFlow is connected but not limiting this game.");
+        ij.Set("title", "Frame pacing off");
+        ij.Set("message", "FrameFlow is connected but not limiting this game.");
         break;
     case Integration::NotAvailable:
         ij.Set("title", "Limiting not available");
@@ -594,8 +569,6 @@ Json EngineApp::BuildStatusLocked() const
                               ? "Attaching on request. If this persists, the game may reject hooks or use an unsupported presentation path."
                               : game_ && game_->profile.limitMethod == "frameflow"
                               ? (game_->profile.framePacing ? "Waiting for the DX11/DX12 hook to attach." : "Select Frame Pacing to enable the DX11/DX12 hook for this run.")
-                              : game_ && game_->profile.limitMethod == "driver"
-                              ? "NVIDIA driver limiting is unavailable for this game."
                               : "Game detected. Select a limiter and enable Frame Pacing to start.");
         break;
     case Integration::Protected:
@@ -752,7 +725,7 @@ void EngineApp::OnMessage(const Json& msg)
 
     if (t == proto::type::SetLimitMethod) {
         const std::string requested = msg["method"].AsString("");
-        if (requested != "auto" && requested != "frameflow" && requested != "driver") {
+        if (requested != "auto" && requested != "frameflow") {
             Reply(msg, false, "Unknown limit method");
             return;
         }

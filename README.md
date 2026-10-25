@@ -13,7 +13,7 @@ drift-free timeline so frames arrive evenly spaced. It detects the running game,
 profile per game, and shows live frametime statistics. Protected games are skipped by default.
 
 This repository includes the validated pacing engine and an **experimental DX11/DX12 hook**.
-Game detection is read-only. Limiting starts only after the user chooses FrameFlow or NVIDIA and
+Game detection is read-only. Limiting starts only after the user chooses FrameFlow and
 enables Frame Pacing for that game run. The hook has not been validated against a broad game
 compatibility matrix. The original DXGI vtable hook crashed Euro Truck Simulator 2 version
 1.61.1.9 when Steam Overlay called it recursively. An alternate Present detour survived manual
@@ -157,18 +157,21 @@ two seconds. The hook remains loaded until the game exits; it is not detached at
 
 This path is **not yet a universal game limiter**. Attachment can arrive after a game
 has created a private or unsupported swap chain; some games reject external hooks or use
-unsupported presentation paths. In those cases the UI reports that FrameFlow cannot limit the game;
-NVIDIA is available only when explicitly selected. The Mini OSD appears over windowed or borderless
+unsupported presentation paths. In those cases the UI reports that FrameFlow cannot limit the game.
+The Mini OSD appears over windowed or borderless
 game windows; it shows a waiting message until a hook or an elevated ETW session supplies frame data.
 Check that the UI reports the FrameFlow pacing method before treating the FPS limit as precise.
 
-For each detected game, choose **Limiter** in the bottom bar: **Auto** uses the in-process
-FrameFlow hook when a session is attached and never enables the NVIDIA limiter;
-**FrameFlow** requires a live DX11/DX12 hook session, established automatically where supported;
-**NVIDIA** explicitly selects the driver limiter. The selected preference is saved in that game's profile. NVIDIA's driver limit
-accepts whole FPS values, while FrameFlow accepts up to three decimal places. Click the large FPS
+For each detected game, choose **Limiter** in the bottom bar: **Off** detects games without limiting;
+**FrameFlow** requires a live DX11/DX12 hook session, established automatically where supported.
+The selected preference is saved in that game's profile, but pacing must be enabled for each run.
+Click the large FPS
 number to type any value from 10 to 1000; the slider markers are shortcuts only. The separate
 **Pacing Mode** menu controls how FrameFlow waits for each frame, not which limiter is selected.
+**Efficiency** uses the least busy waiting, **Balanced** is the default tradeoff, and **Precision**
+spends more CPU time waiting close to the target deadline. These modes cannot remove game-side stalls.
+The main FPS metric is the reciprocal of median frametime, so isolated spikes do not distort the
+typical value; 1% low and the frametime graph still expose those spikes.
 **Mini OSD** in the bottom bar opens FrameFlow's own small, click-through window over the selected
 game. It shows FPS, 1% low, frametime, and a short frametime graph. No RTSS installation is needed.
 The mini follows the game window and hides when the game is minimized or no longer in the foreground.

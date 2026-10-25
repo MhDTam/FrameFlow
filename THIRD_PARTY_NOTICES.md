@@ -3,8 +3,6 @@
 FrameFlow's original source and assets are licensed under the repository's [MIT license](LICENSE).
 Third-party components retain their own licenses.
 
-- **NVIDIA NVAPI SDK**: the import library and headers in `third_party/nvapi/` use the terms in
-  `third_party/nvapi/LICENSE.txt` (portable ZIP: `licenses/NVAPI-MIT.txt`).
 - **MinHook**: the optional Present detour uses MinHook v1.3.4 under BSD-2-Clause terms.
   Its source and license are in `third_party/minhook/` (portable ZIP: `licenses/MinHook-BSD.txt`).
 - **Microsoft Windows App SDK**: the portable build carries runtime files from version

@@ -97,7 +97,7 @@ std::optional<GameProfile> GameProfile::FromJson(const core::Json& j)
     const std::string mode = j["pacingMode"].AsString("Balanced");
     p.pacingMode = (mode == "Efficiency" || mode == "Precision") ? mode : "Balanced";
     const std::string method = j["limitMethod"].AsString("auto");
-    p.limitMethod = (method == "frameflow" || method == "driver") ? method : "auto";
+    p.limitMethod = method == "frameflow" ? method : "auto"; // Old driver profiles migrate to Off.
     p.startWithGame = j["startWithGame"].AsBool(false);
     p.allowProtected = j["allowProtected"].AsBool(false);
     p.manual = j["manual"].AsBool(false);

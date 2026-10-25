@@ -9,6 +9,7 @@ namespace ff::telemetry {
 //
 // Definitions (all computed from real per-frame intervals, never from a 1-second counter):
 //   averageFps      = N / sum(ft_i)                      — time-weighted, not mean(1000/ft_i)
+//   medianFps       = 1000 / median(ft_i)                 — typical FPS, robust to isolated spikes
 //   currentFps      = same formula over the most recent `currentWindowMs` of frames
 //   avgFrametimeMs  = sum(ft_i) / N
 //   stddevMs        = sqrt( sum((ft_i - avg)^2) / N )
@@ -20,6 +21,7 @@ struct FrameStats {
     double windowSeconds = 0.0;
     double currentFps = 0.0;
     double averageFps = 0.0;
+    double medianFps = 0.0;
     double lastFrametimeMs = 0.0;
     double avgFrametimeMs = 0.0;
     double minFrametimeMs = 0.0;

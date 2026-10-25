@@ -1,3 +1,11 @@
+## Current source after 1.0.2
+
+The NVIDIA limiter has been removed. Profiles that selected it now load with limiting Off. The
+main FPS metric uses median frametime to show typical FPS while 1% low and the graph retain spikes.
+Euro Truck Simulator 2 has an experimental opt-in Present detour; see the README for test limits.
+
+## Historical 1.0.2 release notes
+
 FrameFlow 1.0.2 is a Windows x64 update focused on user control and clear game compatibility.
 
 Game detection no longer enables a frame limit or injects the DXGI hook. Choose **FrameFlow** or

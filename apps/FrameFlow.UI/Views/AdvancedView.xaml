@@ -64,7 +64,6 @@
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
                                 </Grid.RowDefinitions>
                                 <TextBlock Grid.Row="0" Text="Game" Style="{StaticResource Key}" />
                                 <TextBlock Grid.Row="0" Grid.Column="1" x:Name="GameValue" Text="—" Style="{StaticResource Val}" />
@@ -74,14 +73,12 @@
                                 <TextBlock Grid.Row="2" Grid.Column="1" x:Name="MethodValue" Text="—" Style="{StaticResource Val}" />
                                 <TextBlock Grid.Row="3" Text="Integration" Style="{StaticResource Key}" />
                                 <TextBlock Grid.Row="3" Grid.Column="1" x:Name="IntegrationValue" Text="—" Style="{StaticResource Val}" />
-                                <TextBlock Grid.Row="4" Text="NVIDIA driver" Style="{StaticResource Key}" />
-                                <TextBlock Grid.Row="4" Grid.Column="1" x:Name="NvidiaValue" Text="—" Style="{StaticResource Val}" />
-                                <TextBlock Grid.Row="5" Text="Measurement" Style="{StaticResource Key}" />
-                                <TextBlock Grid.Row="5" Grid.Column="1" x:Name="MeasurementValue" Text="—" Style="{StaticResource Val}" />
-                                <TextBlock Grid.Row="6" Text="Pacing precision" Style="{StaticResource Key}" />
-                                <TextBlock Grid.Row="6" Grid.Column="1" x:Name="PrecisionValue" Text="—" Style="{StaticResource Val}" />
-                                <TextBlock Grid.Row="7" Text="Why it was detected" Style="{StaticResource Key}" />
-                                <TextBlock Grid.Row="7" Grid.Column="1" x:Name="ReasonsValue" Text="—" Style="{StaticResource Val}" FontWeight="Normal" />
+                                <TextBlock Grid.Row="4" Text="Measurement" Style="{StaticResource Key}" />
+                                <TextBlock Grid.Row="4" Grid.Column="1" x:Name="MeasurementValue" Text="—" Style="{StaticResource Val}" />
+                                <TextBlock Grid.Row="5" Text="Pacing precision" Style="{StaticResource Key}" />
+                                <TextBlock Grid.Row="5" Grid.Column="1" x:Name="PrecisionValue" Text="—" Style="{StaticResource Val}" />
+                                <TextBlock Grid.Row="6" Text="Why it was detected" Style="{StaticResource Key}" />
+                                <TextBlock Grid.Row="6" Grid.Column="1" x:Name="ReasonsValue" Text="—" Style="{StaticResource Val}" FontWeight="Normal" />
                             </Grid>
                         </Border>
                     </StackPanel>
@@ -125,7 +122,7 @@
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
                                 </Grid.RowDefinitions>
-                                <TextBlock Grid.Row="0" Text="Average FPS" Style="{StaticResource Key}" />
+                                <TextBlock Grid.Row="0" Text="Median FPS" Style="{StaticResource Key}" />
                                 <TextBlock Grid.Row="0" Grid.Column="1" x:Name="AvgFps" Text="—" Style="{StaticResource Val}" />
                                 <TextBlock Grid.Row="1" Text="1% / 0.1% low" Style="{StaticResource Key}" />
                                 <TextBlock Grid.Row="1" Grid.Column="1" x:Name="Lows" Text="—" Style="{StaticResource Val}" />

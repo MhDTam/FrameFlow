@@ -52,6 +52,9 @@ FrameStats ComputeStats(std::span<const double> ft, double currentWindowMs)
 
     std::vector<double> sorted(ft.begin(), ft.end());
     std::sort(sorted.begin(), sorted.end(), std::greater<>());
+    const std::size_t mid = sorted.size() / 2;
+    const double medianMs = sorted.size() % 2 == 0 ? (sorted[mid - 1] + sorted[mid]) / 2.0 : sorted[mid];
+    s.medianFps = medianMs > 0.0 ? 1000.0 / medianMs : 0.0;
     const double slow1 = MeanOfSlowest(sorted, 0.01);
     const double slow01 = MeanOfSlowest(sorted, 0.001);
     s.low1Fps = slow1 > 0.0 ? 1000.0 / slow1 : 0.0;

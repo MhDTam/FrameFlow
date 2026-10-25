@@ -175,13 +175,11 @@ public sealed partial class MainWindow : Window
         ModeEfficiency.IsChecked = s.PacingMode == "Efficiency";
         ModeBalanced.IsChecked = s.PacingMode == "Balanced";
         ModePrecision.IsChecked = s.PacingMode == "Precision";
-        LimitMethodText.Text = s.LimitMethodPreference switch { "frameflow" => "FrameFlow", "driver" => "NVIDIA", _ => "Off" };
+        LimitMethodText.Text = s.LimitMethodPreference == "frameflow" ? "FrameFlow" : "Off";
         MethodAuto.IsChecked = s.LimitMethodPreference == "auto";
         MethodFrameFlow.IsChecked = s.LimitMethodPreference == "frameflow";
-        MethodDriver.IsChecked = s.LimitMethodPreference == "driver";
         LimitMethodButton.IsEnabled = s.Game is not null && s.Integration.Status != "Protected";
         MethodFrameFlow.IsEnabled = s.Game is not null && s.Integration.Status != "Protected" && !s.Integration.HookBlocked;
-        MethodDriver.IsEnabled = s.Nvidia.Available && s.Game is not null && s.Integration.Status != "Protected";
         RefreshText.Text = s.RefreshHz > 0 ? $"{s.RefreshHz:0.##} Hz" : "—";
 
         ApplySuggestions(s, fps);
@@ -231,7 +229,6 @@ public sealed partial class MainWindow : Window
 
         bool protectedGame = s.Integration.AntiCheat is not null;
         GameStatusText.Text = protectedGame ? (s.Integration.RiskAccepted ? "Protected · risk accepted" : "Protected game detected")
-                              : s.DriverLimited ? (g.Manual ? "Selected manually · driver limiter" : "Detected · driver limiter")
                               : g.Manual ? "Selected manually" : "Game Detected";
         var fg = protectedGame ? Res<Brush>("FfAmberTextBrush") : Res<Brush>("FfGreenTextBrush");
         GameStatusText.Foreground = fg;
@@ -241,10 +238,8 @@ public sealed partial class MainWindow : Window
             ? Windows.UI.Color.FromArgb(0x26, 0xE0, 0xB4, 0x5A)
             : Windows.UI.Color.FromArgb(0x26, 0x5B, 0xBF, 0x8A));
 
-        // A note when limiting is unavailable, or when the driver limiter works but real-game metrics
-        // need administrator rights.
+        // Explain why limiting is unavailable for the selected game.
         string? note = !s.Integration.CanPace && !string.IsNullOrEmpty(s.Integration.Message) ? s.Integration.Message
-                       : s.DriverLimited && s.MeasurementNeedsAdmin ? "Frametime metrics need FrameFlow running as administrator."
                        : null;
         IntegrationNote.Text = note ?? "";
         IntegrationNote.Visibility = note is null ? Visibility.Collapsed : Visibility.Visible;
@@ -326,7 +321,7 @@ public sealed partial class MainWindow : Window
             return;
         }
         MetricFrametime.Text = t.FrametimeMs.ToString("0.00", CultureInfo.InvariantCulture);
-        MetricFps.Text = t.CurrentFps.ToString("0.00", CultureInfo.InvariantCulture);
+        MetricFps.Text = t.MedianFps.ToString("0.00", CultureInfo.InvariantCulture);
         MetricLow.Text = t.Low1Fps.ToString("0.0", CultureInfo.InvariantCulture);
         GraphAverage.Text = $"{t.AvgFrametimeMs.ToString("0.00", CultureInfo.InvariantCulture)} ms";
         double target = t.PacingActive && t.AppliedFps > 0 ? 1000.0 / t.AppliedFps : 0;

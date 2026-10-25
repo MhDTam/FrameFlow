@@ -12,6 +12,7 @@ TEST(Stats_ConstantFrametimes)
     const auto s = ComputeStats(ft);
     CHECK(s.frames == 600);
     CHECK_NEAR(s.averageFps, 60.0, 0.01);
+    CHECK_NEAR(s.medianFps, 60.0, 0.01);
     CHECK_NEAR(s.avgFrametimeMs, 16.6667, 1e-9);
     CHECK_NEAR(s.stddevMs, 0.0, 1e-9);
     CHECK_NEAR(s.low1Fps, 60.0, 0.01);
@@ -23,6 +24,16 @@ TEST(Stats_AverageFpsIsTimeWeighted)
     // One 10 ms frame and one 30 ms frame: 2 frames in 40 ms = 50 FPS (not mean(100, 33.3) = 66.7).
     std::vector<double> ft = {10.0, 30.0};
     CHECK_NEAR(ComputeStats(ft).averageFps, 50.0, 1e-9);
+}
+
+TEST(Stats_MedianFpsIgnoresIsolatedSpike)
+{
+    std::vector<double> ft(99, 10.0);
+    ft.push_back(100.0);
+    const auto s = ComputeStats(ft);
+    CHECK_NEAR(s.medianFps, 100.0, 1e-9);
+    CHECK(s.averageFps < 100.0);
+    CHECK_NEAR(s.maxFrametimeMs, 100.0, 1e-9);
 }
 
 TEST(Stats_OnePercentLow)

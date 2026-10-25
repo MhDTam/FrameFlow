@@ -11,7 +11,7 @@ namespace ff::etw {
 // system trace events.
 //
 // A real-time ETW session requires administrator rights (a Windows restriction that PresentMon shares).
-// Without them Start() returns NeedElevation and no measurement happens; the driver limiter still works.
+// Without them Start() returns NeedElevation and this optional measurement path stays unavailable.
 
 enum class StartResult : std::uint8_t {
     Ok,

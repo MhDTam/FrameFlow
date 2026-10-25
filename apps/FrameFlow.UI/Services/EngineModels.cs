@@ -15,8 +15,6 @@ public sealed record Integration(string Status, string Title, string Message, st
     public bool CanPace => Status is "Active" or "Standby";
 }
 
-public sealed record NvidiaInfo(bool Available, string Gpu, string DriverVersion);
-
 public sealed record EngineSettingsView(bool AutoDetect, bool MiniOverlay, double TelemetrySeconds, double DefaultFps, string DefaultMode,
                                         string LogLevel, IReadOnlyList<string> ExtraExclusions,
                                         IReadOnlyList<string> BuiltInExclusions, string ProfilesDir, string LogsDir);
@@ -35,12 +33,10 @@ public sealed record EngineStatus(
     GameInfo? Game,
     IReadOnlyList<Candidate> Candidates,
     EngineSettingsView Settings,
-    string LimitMethod,      // "driver" | "frameflow" | "none"
+    string LimitMethod,      // "frameflow" | "none"
     string LimitMethodPreference,
-    NvidiaInfo Nvidia,
     string Measurement)      // "live" | "needsAdmin" | "off"
 {
-    public bool DriverLimited => LimitMethod == "driver";
     public bool MeasurementNeedsAdmin => Measurement == "needsAdmin";
 
     public static EngineStatus Parse(JsonElement e)
@@ -77,7 +73,6 @@ public sealed record EngineStatus(
             game, cands, settings,
             e.Str("limitMethod", "none"),
             e.Str("limitMethodPreference", "auto"),
-            new NvidiaInfo(e.Obj("nvidia").Bool("available"), e.Obj("nvidia").Str("gpu"), e.Obj("nvidia").Str("driverVersion")),
             e.Str("measurement", "off"));
     }
 }
@@ -88,7 +83,7 @@ public sealed record Telemetry(
     bool PacingActive,
     double AppliedFps,
     double CurrentFps,
-    double AverageFps,
+    double MedianFps,
     double FrametimeMs,
     double AvgFrametimeMs,
     double Low1Fps,
@@ -106,7 +101,7 @@ public sealed record Telemetry(
         var s = e.Obj("stats");
         var g = e.Obj("graph");
         return new Telemetry(live, e.Str("method", "frameflow"), e.Bool("pacingActive"), e.Num("appliedFps"),
-            s.Num("currentFps"), s.Num("averageFps"), s.Num("frametimeMs"), s.Num("avgFrametimeMs"),
+            s.Num("currentFps"), s.Num("medianFps"), s.Num("frametimeMs"), s.Num("avgFrametimeMs"),
             s.Num("low1Fps"), s.Num("low01Fps"), s.Num("stddevMs"), s.Num("minFrametimeMs"), s.Num("maxFrametimeMs"),
             g.Num("historySeconds", 30), g.NumList("mean").ToArray(), g.NumList("max").ToArray());
     }
