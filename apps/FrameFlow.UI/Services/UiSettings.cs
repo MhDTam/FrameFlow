@@ -10,6 +10,7 @@ public sealed class UiSettings
     public bool StartMinimized { get; set; }
     public bool ShowAdvancedStats { get; set; }
     public string LastGamePath { get; set; } = "";
+    public int CaptureDelaySeconds { get; set; } = 30;
 
     [JsonIgnore] public bool StartWithWindows
     {

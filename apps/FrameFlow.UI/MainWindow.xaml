@@ -241,9 +241,36 @@
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
-                    <Grid>
+                    <Grid ColumnSpacing="12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
                         <TextBlock Text="Frametime Stability" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource FfInkBrush}" />
-                        <TextBlock HorizontalAlignment="Right" FontSize="11.5" Foreground="{StaticResource FfInk2Brush}"><Run x:Name="GraphAverage" Text="—" FontWeight="SemiBold" Foreground="{StaticResource FfInkBrush}" /><Run Text=" average" /></TextBlock>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                            <TextBlock x:Name="CaptureStatus" FontSize="11.5" Foreground="{StaticResource FfInk2Brush}" VerticalAlignment="Center" Visibility="Collapsed" />
+                            <Button x:Name="CancelCaptureButton" Content="Cancel" Style="{StaticResource FfGhostButton}" Padding="6,2"
+                                    Click="OnCancelCapture" Visibility="Collapsed" AutomationProperties.Name="Cancel scheduled screenshot" />
+                            <Button x:Name="CaptureButton" Content="Capture" Style="{StaticResource FfGhostButton}" Padding="8,2"
+                                    AutomationProperties.Name="Schedule screenshot">
+                                <Button.Flyout>
+                                    <Flyout x:Name="CaptureFlyout" Placement="BottomEdgeAlignedRight">
+                                        <StackPanel Spacing="10" Width="210">
+                                            <TextBlock Text="Save FrameFlow after" FontWeight="SemiBold" />
+                                            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                                <NumberBox x:Name="CaptureDelaySeconds" Width="100" Minimum="1" Maximum="600" Value="30"
+                                                           SmallChange="1" SpinButtonPlacementMode="Compact" AutomationProperties.Name="Screenshot delay in seconds" />
+                                                <TextBlock Text="seconds" VerticalAlignment="Center" />
+                                            </StackPanel>
+                                            <Button Content="Start countdown" Style="{StaticResource FfSoftButton}" Click="OnScheduleCapture" />
+                                            <Button Content="Open screenshots folder" Style="{StaticResource FfGhostButton}" Click="OnOpenScreenshotsFolder" />
+                                        </StackPanel>
+                                    </Flyout>
+                                </Button.Flyout>
+                            </Button>
+                        </StackPanel>
+                        <TextBlock Grid.Column="2" VerticalAlignment="Center" FontSize="11.5" Foreground="{StaticResource FfInk2Brush}"><Run x:Name="GraphAverage" Text="—" FontWeight="SemiBold" Foreground="{StaticResource FfInkBrush}" /><Run Text=" average" /></TextBlock>
                     </Grid>
                     <controls:FrametimeGraph x:Name="Graph" Grid.Row="1" MinHeight="80" />
                 </Grid>

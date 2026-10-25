@@ -31,11 +31,14 @@ public sealed partial class MainWindow : Window
     private string? _iconForExe;
     private double _pendingFps = double.NaN;       // optimistic value while the engine confirms
     private DateTime _pendingFpsUntil = DateTime.MinValue;
+    private CancellationTokenSource? _captureCountdown;
+    private bool _closing;
 
     public MainWindow()
     {
         InitializeComponent();
         ConfigureWindow();
+        CaptureDelaySeconds.Value = Math.Clamp(_uiSettings.CaptureDelaySeconds, 1, 600);
 
         VersionText.Text = AppInfo.IsPortable ? $"v{AppInfo.Version} (portable)" : $"v{AppInfo.Version}";
         Slider.ValueChanging += v => FpsValue.Text = FormatFps(v);
@@ -105,6 +108,8 @@ public sealed partial class MainWindow : Window
     // is asked to stop; it releases every game (pacing off) before exiting.
     private void OnWindowClosed(object sender, WindowEventArgs args)
     {
+        _closing = true;
+        _captureCountdown?.Cancel();
         if (App.Options.SnapshotPath is null && _engine.IsConnected)
         {
             try { _engine.Shutdown().Wait(TimeSpan.FromMilliseconds(400)); }
@@ -553,26 +558,126 @@ public sealed partial class MainWindow : Window
     private static string FormatFps(double fps) =>
         Math.Abs(fps - Math.Round(fps)) < 0.001 ? fps.ToString("0", CultureInfo.InvariantCulture) : fps.ToString("0.##", CultureInfo.InvariantCulture);
 
+    private static string ScreenshotsDirectory
+    {
+        get
+        {
+            string pictures = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures);
+            return Path.Combine(string.IsNullOrWhiteSpace(pictures) ? AppInfo.DataRoot : pictures, "FrameFlow");
+        }
+    }
+
+    private void OnScheduleCapture(object sender, RoutedEventArgs e)
+    {
+        double value = CaptureDelaySeconds.Value;
+        if (!double.IsFinite(value) || value < 1 || value > 600)
+        {
+            CaptureStatus.Text = "Choose 1–600 seconds";
+            CaptureStatus.Visibility = Visibility.Visible;
+            return;
+        }
+
+        int seconds = (int)Math.Round(value);
+        CaptureDelaySeconds.Value = seconds;
+        _uiSettings.CaptureDelaySeconds = seconds;
+        _uiSettings.Save();
+        _captureCountdown?.Cancel();
+        var countdown = new CancellationTokenSource();
+        _captureCountdown = countdown;
+        CaptureStatus.Text = $"Capture in {seconds}s";
+        CaptureStatus.Visibility = Visibility.Visible;
+        CancelCaptureButton.Visibility = Visibility.Visible;
+        CaptureFlyout.Hide();
+        _ = CaptureAfterDelayAsync(seconds, countdown);
+    }
+
+    private void OnCancelCapture(object sender, RoutedEventArgs e)
+    {
+        _captureCountdown?.Cancel();
+        CaptureStatus.Text = "Capture cancelled";
+        CancelCaptureButton.Visibility = Visibility.Collapsed;
+    }
+
+    private async Task CaptureAfterDelayAsync(int seconds, CancellationTokenSource countdown)
+    {
+        try
+        {
+            for (int remaining = seconds; remaining > 0; remaining--)
+            {
+                await Task.Delay(TimeSpan.FromSeconds(1), countdown.Token);
+                if (remaining > 1 && !_closing && ReferenceEquals(_captureCountdown, countdown))
+                    CaptureStatus.Text = $"Capture in {remaining - 1}s";
+            }
+            countdown.Token.ThrowIfCancellationRequested();
+            if (_closing || !ReferenceEquals(_captureCountdown, countdown)) return;
+            CancelCaptureButton.Visibility = Visibility.Collapsed;
+            CaptureStatus.Text = "Saving screenshot…";
+            string file = $"FrameFlow-{DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss-fff", CultureInfo.InvariantCulture)}.png";
+            string path = Path.Combine(ScreenshotsDirectory, file);
+            await SaveWindowPngAsync(path);
+            if (!_closing && ReferenceEquals(_captureCountdown, countdown))
+            {
+                CaptureStatus.Text = $"Saved: {file}";
+                ToolTipService.SetToolTip(CaptureStatus, path);
+            }
+            Log.Info($"Timed screenshot written to {path}");
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            if (!_closing && ReferenceEquals(_captureCountdown, countdown)) CaptureStatus.Text = "Screenshot failed";
+            Log.Error($"Timed screenshot failed: {ex}");
+        }
+        finally
+        {
+            if (ReferenceEquals(_captureCountdown, countdown))
+            {
+                _captureCountdown = null;
+                if (!_closing) CancelCaptureButton.Visibility = Visibility.Collapsed;
+            }
+            countdown.Dispose();
+        }
+    }
+
+    private void OnOpenScreenshotsFolder(object sender, RoutedEventArgs e)
+    {
+        CaptureFlyout.Hide();
+        try
+        {
+            Directory.CreateDirectory(ScreenshotsDirectory);
+            Process.Start(new ProcessStartInfo(ScreenshotsDirectory) { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            CaptureStatus.Text = "Could not open screenshots folder";
+            CaptureStatus.Visibility = Visibility.Visible;
+            Log.Warn($"Could not open screenshots folder: {ex.Message}");
+        }
+    }
+
+    private async Task SaveWindowPngAsync(string path)
+    {
+        var rtb = new RenderTargetBitmap();
+        await rtb.RenderAsync(Root);
+        var pixels = await rtb.GetPixelsAsync();
+        string full = Path.GetFullPath(path);
+        Directory.CreateDirectory(Path.GetDirectoryName(full)!);
+        using var fs = File.Create(full);
+        var encoder = await BitmapEncoder.CreateAsync(BitmapEncoder.PngEncoderId, fs.AsRandomAccessStream());
+        double dpi = 96.0 * (Root.XamlRoot?.RasterizationScale ?? 1.0);
+        encoder.SetPixelData(BitmapPixelFormat.Bgra8, BitmapAlphaMode.Premultiplied,
+                             (uint)rtb.PixelWidth, (uint)rtb.PixelHeight, dpi, dpi, pixels.ToArray());
+        await encoder.FlushAsync();
+    }
+
     /// <summary>Renders the window content to a PNG (automated visual verification), then exits.</summary>
     private async Task SnapshotAndExit(string path, int delayMs)
     {
         await Task.Delay(delayMs);
         try
         {
-            var rtb = new RenderTargetBitmap();
-            await rtb.RenderAsync(Root);
-            var pixels = await rtb.GetPixelsAsync();
-            string full = Path.GetFullPath(path);
-            Directory.CreateDirectory(Path.GetDirectoryName(full)!);
-            using (var fs = File.Create(full))
-            {
-                var encoder = await BitmapEncoder.CreateAsync(BitmapEncoder.PngEncoderId, fs.AsRandomAccessStream());
-                double dpi = 96.0 * (Root.XamlRoot?.RasterizationScale ?? 1.0);
-                encoder.SetPixelData(BitmapPixelFormat.Bgra8, BitmapAlphaMode.Premultiplied,
-                                     (uint)rtb.PixelWidth, (uint)rtb.PixelHeight, dpi, dpi, pixels.ToArray());
-                await encoder.FlushAsync();
-            }
-            Log.Info($"Snapshot written to {full}");
+            await SaveWindowPngAsync(path);
+            Log.Info($"Snapshot written to {Path.GetFullPath(path)}");
         }
         catch (Exception ex)
         {
