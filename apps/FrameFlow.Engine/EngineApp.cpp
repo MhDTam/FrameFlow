@@ -268,7 +268,6 @@ void EngineApp::TryAutoAttach()
         !game_->profile.framePacing || game_->profile.limitMethod != "frameflow" ||
         (game_->antiCheat && !game_->profile.allowProtected) ||
         (game_->api != "DX11" && game_->api != "DX12" && game_->api != "DXGI")) return;
-    if (process::IsKnownUnsafeHookTarget(game_->exeName)) return;
     game_->attachAttempted = true;
     wchar_t self[MAX_PATH]{};
     if (!::GetModuleFileNameW(nullptr, self, MAX_PATH)) return;
@@ -276,6 +275,7 @@ void EngineApp::TryAutoAttach()
     if (!std::filesystem::exists(launcher)) return;
     std::wstring command = QuoteArg(launcher.wstring()) + L" ";
     if (game_->antiCheat) command += L"--allow-protected ";
+    if (process::IsKnownUnsafeHookTarget(game_->exeName)) command += L"--detour-present ";
     command += L"--attach " + std::to_wstring(game_->pid) + L" " + QuoteArg(game_->exePathW);
     STARTUPINFOW startup{};
     startup.cb = sizeof(startup);
@@ -316,6 +316,12 @@ void EngineApp::TryAttachSession()
     if (!game_->session) return;
     FF_LOG_INFO("Attached to FrameFlow session in {} (api {})", game_->exeName, game_->session->Block().client.graphicsApi);
     game_->api = game_->session->Block().client.graphicsApi;
+    if (process::IsKnownUnsafeHookTarget(game_->exeName) && game_->profile.limitMethod == "auto") {
+        // A known-unsafe game can only reach this point through an explicit diagnostic attach.
+        // Select the connected method for this process, but leave pacing disabled until the user enables it.
+        game_->profile.limitMethod = "frameflow";
+        FF_LOG_INFO("Diagnostic session selected FrameFlow for {}; pacing remains off", game_->exeName);
+    }
     game_->reader.SkipToEnd(game_->session->Block());
 }
 
@@ -567,7 +573,7 @@ Json EngineApp::BuildStatusLocked() const
         ij.Set("antiCheat", game_->antiCheat->product);
         ij.Set("riskAccepted", game_->profile.allowProtected);
     }
-    ij.Set("hookBlocked", game_ && process::IsKnownUnsafeHookTarget(game_->exeName));
+    ij.Set("hookBlocked", false); // ETS2 uses the opt-in Present detour instead of the vtable hook.
     switch (integ) {
     case Integration::None:
         ij.Set("title", "No game detected");
@@ -584,9 +590,7 @@ Json EngineApp::BuildStatusLocked() const
         break;
     case Integration::NotAvailable:
         ij.Set("title", "Limiting not available");
-        ij.Set("message", game_ && process::IsKnownUnsafeHookTarget(game_->exeName)
-                              ? "The DXGI hook crashed this game. Start it normally and select the NVIDIA limiter manually if available."
-                              : game_ && game_->attachAttempted
+        ij.Set("message", game_ && game_->attachAttempted
                               ? "Attaching on request. If this persists, the game may reject hooks or use an unsupported presentation path."
                               : game_ && game_->profile.limitMethod == "frameflow"
                               ? (game_->profile.framePacing ? "Waiting for the DX11/DX12 hook to attach." : "Select Frame Pacing to enable the DX11/DX12 hook for this run.")

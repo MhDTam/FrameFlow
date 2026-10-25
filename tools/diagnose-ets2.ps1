@@ -16,7 +16,7 @@ if (-not (Test-Path -LiteralPath $launcher)) {
 }
 
 Write-Output "Attaching diagnostic hook to PID $($game.Id). The game may crash."
-& $launcher --diagnose-unsafe --attach $game.Id $game.Path
+& $launcher --diagnose-unsafe --detour-present --attach $game.Id $game.Path
 if ($LASTEXITCODE -ne 0) {
     throw "Diagnostic attach failed with exit code $LASTEXITCODE. Check the FrameFlow hook log."
 }

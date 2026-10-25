@@ -4,6 +4,7 @@
 #include "Core/Log.h"
 #include "Core/Strings.h"
 #include "Timing/Clock.h"
+#include "MinHook.h"
 
 #include <windows.h>
 #include <psapi.h>
@@ -37,6 +38,7 @@ using CreateSwapChainForComposition = HRESULT(STDMETHODCALLTYPE*)(IDXGIFactory2*
 struct PatchedSlot { void** slot; void* original; };
 std::mutex g_mutex;
 std::vector<PatchedSlot> g_slots;
+std::unordered_map<void*, void*> g_detourOriginals;
 std::unordered_map<IDXGISwapChain*, const char*> g_chainApi;
 std::shared_ptr<ff::graphics::PresentPacer> g_pacer;
 std::mutex g_waitMutex;
@@ -46,6 +48,7 @@ LARGE_INTEGER g_frequency{};
 std::atomic<bool> g_running{true};
 std::atomic<unsigned> g_presentSamples{0};
 std::atomic<bool> g_diagnostics{false};
+std::atomic<bool> g_detourMode{false};
 thread_local unsigned g_presentDepth = 0;
 
 struct PresentDepthScope {
@@ -81,6 +84,14 @@ template<class F> F Original(void** slot, F fallback = nullptr)
     return fallback;
 }
 
+template<class F> F OriginalPresent(void** slot)
+{
+    if (!g_detourMode.load(std::memory_order_relaxed)) return Original(slot, static_cast<F>(nullptr));
+    std::scoped_lock lock(g_mutex);
+    const auto it = g_detourOriginals.find(*slot);
+    return it == g_detourOriginals.end() ? nullptr : reinterpret_cast<F>(it->second);
+}
+
 bool Patch(void** slot, void* replacement)
 {
     std::scoped_lock lock(g_mutex);
@@ -91,6 +102,30 @@ bool Patch(void** slot, void* replacement)
     DWORD ignored = 0;
     ::VirtualProtect(slot, sizeof(void*), old, &ignored);
     g_slots.push_back({slot, previous});
+    return true;
+}
+
+bool PatchPresent(void** slot, void* replacement)
+{
+    if (!g_detourMode.load(std::memory_order_relaxed)) return Patch(slot, replacement);
+    void* target = *slot;
+    std::scoped_lock lock(g_mutex);
+    if (g_detourOriginals.contains(target)) return true;
+    void* trampoline = nullptr;
+    MH_STATUS status = ::MH_CreateHook(target, replacement, &trampoline);
+    if (status != MH_OK) {
+        FF_LOG_WARN("Present detour creation failed: {}", static_cast<int>(status));
+        return false;
+    }
+    g_detourOriginals.emplace(target, trampoline);
+    status = ::MH_EnableHook(target);
+    if (status != MH_OK) {
+        g_detourOriginals.erase(target);
+        ::MH_RemoveHook(target);
+        FF_LOG_WARN("Present detour enable failed: {}", static_cast<int>(status));
+        return false;
+    }
+    FF_LOG_INFO("Present detour installed at {}", target);
     return true;
 }
 
@@ -136,7 +171,7 @@ HRESULT STDMETHODCALLTYPE HookPresent(IDXGISwapChain* self, UINT interval, UINT 
     const unsigned depth = g_presentDepth;
     PresentDepthScope depthScope;
     const auto hookEntry = ff::timing::Clock::Now();
-    auto original = Original(reinterpret_cast<void***>(self)[0] + 8, static_cast<Present>(nullptr));
+    auto original = OriginalPresent<Present>(reinterpret_cast<void***>(self)[0] + 8);
     if (!original) return E_FAIL;
     const bool diagnostics = g_diagnostics.load(std::memory_order_relaxed);
     const unsigned sample = diagnostics ? g_presentSamples.fetch_add(1, std::memory_order_relaxed) : 3;
@@ -168,7 +203,7 @@ HRESULT STDMETHODCALLTYPE HookPresent1(IDXGISwapChain1* self, UINT interval, UIN
     const unsigned depth = g_presentDepth;
     PresentDepthScope depthScope;
     const auto hookEntry = ff::timing::Clock::Now();
-    auto original = Original(reinterpret_cast<void***>(self)[0] + 22, static_cast<Present1>(nullptr));
+    auto original = OriginalPresent<Present1>(reinterpret_cast<void***>(self)[0] + 22);
     if (!original) return E_FAIL;
     const bool diagnostics = g_diagnostics.load(std::memory_order_relaxed);
     const unsigned sample = diagnostics ? g_presentSamples.fetch_add(1, std::memory_order_relaxed) : 3;
@@ -202,11 +237,11 @@ void PatchSwapChain(IDXGISwapChain* chain, const char* api)
         g_chainApi[chain] = api;
     }
     auto** table = *reinterpret_cast<void***>(chain);
-    Patch(table + 8, reinterpret_cast<void*>(&HookPresent));
+    PatchPresent(table + 8, reinterpret_cast<void*>(&HookPresent));
     IDXGISwapChain1* chain1 = nullptr;
     if (SUCCEEDED(chain->QueryInterface(__uuidof(IDXGISwapChain1), reinterpret_cast<void**>(&chain1)))) {
         auto** table1 = *reinterpret_cast<void***>(chain1);
-        Patch(table1 + 22, reinterpret_cast<void*>(&HookPresent1));
+        PatchPresent(table1 + 22, reinterpret_cast<void*>(&HookPresent1));
         chain1->Release();
     }
 }
@@ -456,6 +491,15 @@ DWORD WINAPI Worker(void* self)
     HANDLE diagnostics = ::OpenEventW(SYNCHRONIZE, FALSE, diagnosticsName.c_str());
     g_diagnostics = diagnostics != nullptr;
     if (diagnostics) ::CloseHandle(diagnostics);
+    const std::wstring detourName = L"Local\\FrameFlow.HookDetours." +
+        std::to_wstring(::GetCurrentProcessId());
+    HANDLE detours = ::OpenEventW(SYNCHRONIZE, FALSE, detourName.c_str());
+    g_detourMode = detours != nullptr;
+    if (detours) ::CloseHandle(detours);
+    if (g_detourMode && ::MH_Initialize() != MH_OK) {
+        FF_LOG_ERROR("MinHook initialization failed");
+        return 1;
+    }
     // Keep this module loaded for the lifetime of the game: patched import/vtable entries point here.
     HMODULE pinned = nullptr;
     ::GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_PIN,
@@ -473,6 +517,11 @@ DWORD WINAPI Worker(void* self)
         if (firstScan) {
             PrimeExistingPresentVtable();
             FF_LOG_INFO("First import scan complete: {} patched slots", g_slots.size());
+            if (g_detourMode && g_detourOriginals.empty()) {
+                FF_LOG_ERROR("No Present detour could be installed");
+                if (ready) ::CloseHandle(ready);
+                return 2;
+            }
             if (ready) ::SetEvent(ready);
             firstScan = false;
         }

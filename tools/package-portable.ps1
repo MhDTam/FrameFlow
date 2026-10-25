@@ -103,6 +103,7 @@ Copy-Item -LiteralPath (Join-Path $rootDir 'LICENSE') -Destination $resolvedOutp
 Copy-Item -LiteralPath (Join-Path $rootDir 'THIRD_PARTY_NOTICES.md') -Destination $resolvedOutput -Force
 New-Item -ItemType Directory -Path (Join-Path $resolvedOutput 'licenses') -Force | Out-Null
 Copy-Item -LiteralPath (Join-Path $rootDir 'third_party\nvapi\LICENSE.txt') -Destination (Join-Path $resolvedOutput 'licenses\NVAPI-MIT.txt') -Force
+Copy-Item -LiteralPath (Join-Path $rootDir 'third_party\minhook\LICENSE.txt') -Destination (Join-Path $resolvedOutput 'licenses\MinHook-BSD.txt') -Force
 $notices = @(
     @('windows-app-sdk\LICENSE.txt', 'WindowsAppSDK-LICENSE.txt'),
     @('windows-app-sdk\NOTICE.txt', 'WindowsAppSDK-NOTICE.txt'),
@@ -152,7 +153,7 @@ try {
     $entries = @($archive.Entries | ForEach-Object { $_.FullName.Replace('\', '/') })
     foreach ($name in @('FrameFlow.exe', 'FrameFlow.UI.exe', 'FrameFlow.Engine.exe', 'FrameFlow.Launch.exe',
                         'FrameFlow.Hook64.dll', 'portable.txt', 'run.bat', 'LICENSE',
-                        'THIRD_PARTY_NOTICES.md', 'licenses/NVAPI-MIT.txt',
+                        'THIRD_PARTY_NOTICES.md', 'licenses/NVAPI-MIT.txt', 'licenses/MinHook-BSD.txt',
                         'licenses/WindowsAppSDK-LICENSE.txt', 'licenses/WindowsAppSDK-NOTICE.txt',
                         'licenses/DotNetRuntime-LICENSE.txt', 'licenses/DotNetRuntime-NOTICE.txt',
                         'licenses/SystemDrawing-LICENSE.txt', 'licenses/SystemDrawing-NOTICE.txt')) {

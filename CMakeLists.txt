@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(FrameFlow VERSION 1.0.2 LANGUAGES CXX RC)
+project(FrameFlow VERSION 1.0.2 LANGUAGES C CXX RC)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -31,6 +31,8 @@ else()
 endif()
 
 enable_testing()
+
+add_subdirectory(third_party/minhook)
 
 add_subdirectory(native)
 add_subdirectory(apps/FrameFlow)

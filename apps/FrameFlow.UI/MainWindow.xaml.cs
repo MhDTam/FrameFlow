@@ -197,6 +197,7 @@ public sealed partial class MainWindow : Window
             "Active" => ("Active", Res<Brush>("FfGreenTextBrush")),
             "Standby" => ("Disabled", Res<Brush>("FfInk3Brush")),
             "Protected" => ("Unavailable", Res<Brush>("FfAmberTextBrush")),
+            "NotAvailable" when s.LimitMethodPreference == "auto" => ("Choose limiter", Res<Brush>("FfInk3Brush")),
             "NotAvailable" when s.Integration.HookBlocked && s.LimitMethodPreference == "frameflow" => ("Unavailable", Res<Brush>("FfInk3Brush")),
             "NotAvailable" when canToggle => (s.PacingEnabled ? "Connecting" : "Off", Res<Brush>("FfInk3Brush")),
             "NotAvailable" or "AccessDenied" => ("Unavailable", Res<Brush>("FfInk3Brush")),

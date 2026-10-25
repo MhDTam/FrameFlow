@@ -15,9 +15,11 @@ profile per game, and shows live frametime statistics. Protected games are skipp
 This repository includes the validated pacing engine and an **experimental DX11/DX12 hook**.
 Game detection is read-only. Limiting starts only after the user chooses FrameFlow or NVIDIA and
 enables Frame Pacing for that game run. The hook has not been validated against a broad game
-compatibility matrix. Late attachment to Euro Truck Simulator 2 version 1.61.1.9 caused repeated
-crashes; that path remains blocked. Direct early launch of this Steam title also exits before it
-initializes. For now, start ETS2 through Steam and select the NVIDIA driver limit manually if available.
+compatibility matrix. The original DXGI vtable hook crashed Euro Truck Simulator 2 version
+1.61.1.9 when Steam Overlay called it recursively. An alternate Present detour survived manual
+testing with Steam Overlay enabled, but automatic attachment across game restarts still needs
+validation. Start this title normally through Steam; direct early launch exits before the game
+initializes.
 
 ## What works today
 

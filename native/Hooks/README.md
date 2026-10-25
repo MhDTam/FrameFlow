@@ -4,6 +4,9 @@ Experimental x64 DX11/DX12 in-game module. `FrameFlow.Launch.exe` loads it eithe
 into a selected running game. It hooks standard DX11/DXGI imports and best-effort existing DXGI
 Present vtables to discover swap chains, then calls
 `PresentPacer::BeforePresent()` at the front edge of `Present` / `Present1`.
+Euro Truck Simulator 2 uses a MinHook function detour for Present instead of rewriting its
+vtable slot, after the user selects FrameFlow and enables Frame Pacing. The diagnostic script
+adds `--diagnose-unsafe` to capture the first few Present calls; ordinary attachment does not.
 
 Hard rules:
 * Protected games are skipped unless the user accepts the risk for that specific game profile.
@@ -13,12 +16,11 @@ Hard rules:
   Runtime detach is not supported yet.
 * Talks to the engine only through `IPC/SharedSession` — never loads paths or DLLs received from outside.
 
-Euro Truck Simulator 2 is blocked from automatic attachment after repeated crashes. To investigate
-it, enable Windows Error Reporting minidumps with `tools/ets2-crash-dump.ps1 -Action Enable`,
-disable Steam Overlay for this game in Steam properties, launch the game normally through Steam,
-then run `tools/diagnose-ets2.ps1` while it is running. The launcher refuses the diagnostic
-attach if the Steam overlay module is still loaded, because a captured call stack showed it
-recursively calling FrameFlow's DXGI Present hook until the game crashed.
+The default vtable hook repeatedly crashed Euro Truck Simulator 2. A captured stack showed
+Steam Overlay recursively calling that hook. The alternate Present detour remained connected
+with Steam Overlay enabled during a manual test at 70 FPS. To collect diagnostics, enable
+Windows Error Reporting minidumps with `tools/ets2-crash-dump.ps1 -Action Enable`, launch the
+game normally through Steam, then run `tools/diagnose-ets2.ps1` while it is running.
 The diagnostic script explicitly opts into the known-unsafe late attach; it does not change the
 normal game's profile or bypass protected-game checks. After testing, run
 `tools/ets2-crash-dump.ps1 -Action Disable`. Dumps are written under `%LOCALAPPDATA%\FrameFlow\CrashDumps\`
